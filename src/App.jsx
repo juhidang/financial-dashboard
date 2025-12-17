@@ -10,9 +10,9 @@ import {
 // ============================================================================
 const CONFIG = {
   // Your n8n webhook URLs (use without -test for production)
-  METRICS_ENDPOINT: 'https://juhi.app.n8n.cloud/webhook-test/metrics-compare',
-  GUIDANCE_ENDPOINT: 'https://juhi.app.n8n.cloud/webhook-test/guidance-compare',
-  CHAT_ENDPOINT: 'https://juhi.app.n8n.cloud/webhook-test/chat',
+  METRICS_ENDPOINT: 'https://juhi.app.n8n.cloud/webhook/metrics-compare',
+  GUIDANCE_ENDPOINT: 'https://juhi.app.n8n.cloud/webhook/guidance-compare',
+  CHAT_ENDPOINT: 'https://juhi.app.n8n.cloud/webhook/chat',
   
   // Supabase Storage URL for PDFs (update with your project URL)
   // Format: https://YOUR_PROJECT_ID.supabase.co/storage/v1/object/public/earnings-documents/
