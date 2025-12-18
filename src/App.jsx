@@ -1396,6 +1396,27 @@ export default function App() {
               >
                 <RefreshCw className={`w-5 h-5 ${(isLoadingMetrics || isLoadingGuidance) ? 'animate-spin' : ''}`} />
               </button>
+
+              <button
+                onClick={() => setViewMode('landing')}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg transition-colors font-medium self-end"
+                style={{
+                  backgroundColor: THEME.bg.tertiary,
+                  color: THEME.text.secondary,
+                  border: `1px solid ${THEME.border}`
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = THEME.accent.primary;
+                  e.currentTarget.style.color = 'white';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = THEME.bg.tertiary;
+                  e.currentTarget.style.color = THEME.text.secondary;
+                }}
+              >
+                <Upload className="w-4 h-4" />
+                File Uploads
+              </button>
             </div>
           </div>
         </div>
