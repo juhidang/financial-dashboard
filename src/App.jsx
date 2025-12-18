@@ -1,38 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Send, FileText, TrendingUp, MessageSquare, ChevronDown, ChevronRight, 
-  ExternalLink, Loader2, Building2, Calendar, RefreshCw, X, AlertCircle,
-  BookOpen, Upload, Download, Zap, Database, Brain, Activity,
-  Plus, Check, ArrowUpRight, ArrowDownRight, Minus
+  Loader2, Building2, Calendar, RefreshCw, X, AlertCircle,
+  BookOpen, Upload, Download, Brain, ArrowUpRight, ArrowDownRight, Minus
 } from 'lucide-react';
 
 // ============================================================================
-// CONFIGURATION - Your endpoints remain unchanged
+// CONFIGURATION (UNTOUCHED)
 // ============================================================================
 const CONFIG = {
-  // Your n8n webhook URLs (KEEP THESE - they're working)
   METRICS_ENDPOINT: 'https://juhi.app.n8n.cloud/webhook/metrics-compare',
   GUIDANCE_ENDPOINT: 'https://juhi.app.n8n.cloud/webhook/guidance-compare',
   CHAT_ENDPOINT: 'https://juhi.app.n8n.cloud/webhook/chat',
-  
-  // Ingestion Pipeline Form URL (update with your actual form URL)
   INGESTION_FORM_URL: 'https://juhi.app.n8n.cloud/form/cc79e7b5-c57c-41eb-85a4-98ed363ea3bd',
-  
-  // Supabase Storage URL for PDFs
   SUPABASE_STORAGE_URL: 'https://xogwcwqqqtavklturbrt.supabase.co/storage/v1/object/public/earnings-documents/',
-  
-  // Sectors and their tickers
   SECTORS: {
     'Healthcare': ['MAXHEALTH', 'APOLLOHOSP', 'FORTIS', 'ASTERDM', 'HCG', 'NH', 'JLHL', 'KIMS', 'RAINBOW'],
-    'Financial Services': [],
-    'Telecom': [],
-    'Industrials': [],
-    'Auto': [],
-    'IT Services': [],
-    'QSR': [],
+    'Financial Services': [], 'Telecom': [], 'Industrials': [], 'Auto': [], 'IT Services': [], 'QSR': [],
   },
-  
-  // Company display names
   COMPANY_NAMES: {
     'MAXHEALTH': 'Max Healthcare Institute Ltd',
     'APOLLOHOSP': 'Apollo Hospitals Enterprise Ltd',
@@ -44,81 +29,57 @@ const CONFIG = {
     'KIMS': 'Krishna Institute of Medical Sciences Ltd',
     'RAINBOW': 'Rainbow Children\'s Medicare Ltd',
   },
-  
-  // Metrics to exclude from display (Issue #3)
   EXCLUDED_METRICS: ['Revenue', 'EBITDA', 'Gross Revenue', 'Net Revenue'],
-  
-  // Display quarters
   DISPLAY_QUARTERS: ['FY26-Q2', 'FY26-Q1', 'FY25-Q4', 'FY25-Q3'],
 };
 
 // ============================================================================
-// THEME COLORS - Improved contrast (Issue #10)
+// THEME: PROFESSIONAL GUNMETAL
 // ============================================================================
 const THEME = {
   bg: {
-    primary: '#0A192F',      // Deep Navy - main background
-    secondary: '#112240',    // Slightly lighter - cards
-    tertiary: '#1E3A5F',     // Even lighter - hover states
-    input: '#0D1F3C',        // Input backgrounds
+    primary: '#1E2125',      // Gunmetal Dark
+    secondary: '#222B35',    // Header/Sidebar
+    card: '#2C343C',         // Card Background
+    hover: '#353D46',        // Hover state
+    input: '#181A1E',        // Input fields
   },
   text: {
-    primary: '#E6F1FF',      // Main text - bright
-    secondary: '#A8B2D1',    // Muted text - IMPROVED CONTRAST
-    tertiary: '#697A9B',     // Dimmer text - IMPROVED CONTRAST
-    muted: '#5A6A8A',        // Very muted - IMPROVED CONTRAST
+    primary: '#FFFFFF',      // Pure White Headers
+    secondary: '#AAB2BD',    // Light Grey body
+    muted: '#656D78',        // Muted labels
   },
   accent: {
-    primary: '#6C63FF',      // Electric Violet - primary actions
-    secondary: '#4D7CFF',    // Electric Blue - secondary
-    highlight: '#00FFC6',    // Neon Mint - highlights/positive
-    cyan: '#00E5FF',         // Cyan - accents
+    teal: '#00D2B4',         // Mint/Teal (Primary Action)
+    blue: '#44D9E6',         // Sky Blue (Secondary)
+    purple: '#9F7AEA',       // Soft Purple (Accents)
+    red: '#FC6E6E',          // Soft Red
   },
-  semantic: {
-    positive: '#00FFC6',     // Mint green
-    negative: '#FF6B7A',     // Softer coral - IMPROVED VISIBILITY
-    warning: '#FFD93D',      // Warm yellow
-    info: '#4D7CFF',         // Blue
-  },
-  border: '#1E3A5F',
-  glow: {
-    primary: '0 0 20px rgba(108, 99, 255, 0.3)',
-    accent: '0 0 20px rgba(0, 255, 198, 0.2)',
-  }
+  border: '#3A404A',         // Subtle Borders
+  shadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.15)'
 };
 
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
-
 const getConfidenceBadge = (level) => {
-  const styles = {
-    COMMITTED: { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30' },
-    EXPECTED: { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/30' },
-    PLANNED: { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/30' },
-    ON_TRACK: { bg: 'bg-cyan-500/20', text: 'text-cyan-400', border: 'border-cyan-500/30' },
-    ACHIEVED: { bg: 'bg-violet-500/20', text: 'text-violet-400', border: 'border-violet-500/30' },
-    DEFAULT: { bg: 'bg-slate-500/20', text: 'text-slate-400', border: 'border-slate-500/30' }
-  };
-  return styles[level?.toUpperCase()] || styles.DEFAULT;
+  const base = "border px-1.5 py-0.5 rounded text-[10px] font-medium tracking-wide";
+  switch (level?.toUpperCase()) {
+    case 'COMMITTED': return `${base} border-emerald-800 bg-emerald-900/30 text-emerald-400`;
+    case 'EXPECTED':  return `${base} border-blue-800 bg-blue-900/30 text-blue-400`;
+    case 'PLANNED':   return `${base} border-amber-800 bg-amber-900/30 text-amber-400`;
+    default:          return `${base} border-slate-700 bg-slate-800 text-slate-400`;
+  }
 };
 
 const formatValue = (value, currency, unit) => {
-  if (value === null || value === undefined || value === '') {
-    return <span className="text-[#5A6A8A]">—</span>;
-  }
+  if (value === null || value === undefined || value === '') return <span className="text-gray-600">—</span>;
   const numValue = typeof value === 'string' ? parseFloat(value.replace(/,/g, '')) : value;
   const prefix = currency === 'INR' ? '₹' : '';
   const suffix = unit ? ` ${unit}` : '';
-  const formattedValue = numValue.toLocaleString('en-IN');
-  return (
-    <span className="font-medium text-[#E6F1FF]">
-      {prefix}{formattedValue}{suffix}
-    </span>
-  );
+  return <span className="font-medium text-white">{prefix}{numValue.toLocaleString('en-IN')}{suffix}</span>;
 };
 
-// Calculate QoQ change
 const calculateChange = (current, previous) => {
   if (!current || !previous) return null;
   const curr = parseFloat(String(current).replace(/,/g, ''));
@@ -127,729 +88,381 @@ const calculateChange = (current, previous) => {
   return ((curr - prev) / prev * 100).toFixed(1);
 };
 
-// Export to CSV
-const exportToCSV = (data, filename) => {
-  if (!data || !data.metrics || data.metrics.length === 0) return;
-  
-  const quarters = data.quarters || [];
-  const headers = ['Metric', 'Unit', 'Currency', ...quarters];
-  
-  const rows = data.metrics.map(metric => {
-    const row = [
-      metric.metric_name,
-      metric.unit || '',
-      metric.currency || '',
-      ...quarters.map(q => metric[q]?.value || '')
-    ];
-    return row.join(',');
-  });
-  
-  const csv = [headers.join(','), ...rows].join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${filename}_metrics.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-};
-
-// Filter out excluded metrics (Issue #3)
 const filterMetrics = (metrics) => {
   if (!metrics) return [];
-  return metrics.filter(metric => {
-    const metricName = metric.metric_name?.toLowerCase() || '';
-    return !CONFIG.EXCLUDED_METRICS.some(excluded => 
-      metricName.includes(excluded.toLowerCase())
-    );
-  });
+  return metrics.filter(metric => 
+    !CONFIG.EXCLUDED_METRICS.some(excluded => metric.metric_name?.toLowerCase().includes(excluded.toLowerCase()))
+  );
 };
 
 // ============================================================================
-// PDF VIEWER PANEL - Improved transitions (Issue #7)
+// SUB-COMPONENTS
 // ============================================================================
-const PDFViewerPanel = ({ isOpen, onClose, pdfUrl, pageNumber, quote, sourceFile }) => {
-  const [copied, setCopied] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  
-  useEffect(() => {
-    if (isOpen) {
-      setIsLoading(true);
-    }
-  }, [isOpen, pdfUrl]);
 
-  const copyQuote = () => {
-    if (quote) {
-      navigator.clipboard.writeText(quote);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
+// 1. PDF VIEWER - Slides over the Right Column
+const PDFViewerPanel = ({ isOpen, onClose, pdfUrl, pageNumber, quote, sourceFile }) => {
+  const [isLoading, setIsLoading] = useState(true);
+  useEffect(() => { if (isOpen) setIsLoading(true); }, [isOpen, pdfUrl]);
 
   return (
-    <>
-      {/* Backdrop with smooth transition */}
-      <div 
-        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-300 ${
-          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
-        onClick={onClose} 
-      />
-      
-      {/* Panel with slide-in transition */}
-      <div 
-        className={`fixed right-0 top-0 h-full w-full md:w-2/3 lg:w-1/2 bg-[#0A192F] shadow-2xl z-50 flex flex-col border-l border-[#1E3A5F] transform transition-transform duration-300 ease-out ${
-          isOpen ? 'translate-x-0' : 'translate-x-full'
-        }`}
-      >
-        <div className="flex items-center justify-between p-4 border-b border-[#1E3A5F] bg-[#112240]">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-[#6C63FF] rounded-lg">
-              <FileText className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-[#E6F1FF]">{sourceFile || 'Document'}</h3>
-              <p className="text-sm text-[#A8B2D1]">Page {pageNumber}</p>
-            </div>
+    <div 
+      className={`fixed right-0 top-[57px] bottom-0 bg-[#2C343C] shadow-2xl z-50 flex flex-col border-l border-[#3A404A] transform transition-transform duration-300 ease-in-out`}
+      style={{ width: '35%', transform: isOpen ? 'translateX(0)' : 'translateX(100%)' }}
+    >
+      <div className="flex items-center justify-between p-3 border-b border-[#3A404A] bg-[#222B35]">
+        <div className="flex items-center gap-2 overflow-hidden">
+          <FileText className="w-4 h-4 text-[#00D2B4]" />
+          <div className="flex flex-col">
+            <span className="text-sm font-medium text-white truncate max-w-[200px]">{sourceFile || 'Document'}</span>
+            <span className="text-xs text-[#AAB2BD]">Page {pageNumber}</span>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-[#1E3A5F] rounded-lg transition-colors">
-            <X className="w-5 h-5 text-[#A8B2D1]" />
-          </button>
         </div>
+        <button onClick={onClose} className="p-1 hover:bg-[#353D46] rounded transition-colors">
+          <X className="w-5 h-5 text-[#AAB2BD]" />
+        </button>
+      </div>
 
-        {quote && (
-          <div className="p-4 bg-gradient-to-r from-[#6C63FF]/10 to-[#00FFC6]/10 border-b border-[#1E3A5F]">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-lg">📌</span>
-              <p className="text-sm font-semibold text-[#00FFC6]">Referenced Quote</p>
-            </div>
-            <p className="text-sm text-[#E6F1FF] bg-[#0A192F]/50 p-3 rounded-lg border border-[#1E3A5F] italic leading-relaxed">
-              "{quote}"
-            </p>
-            <div className="mt-3 flex items-center gap-3 text-xs">
-              <span className="text-[#A8B2D1]">
-                💡 Press <kbd className="px-1.5 py-0.5 bg-[#1E3A5F] rounded font-mono text-[#00FFC6]">Ctrl+F</kbd> to search
-              </span>
-              <button onClick={copyQuote} className="text-[#6C63FF] hover:text-[#00FFC6] transition-colors">
-                {copied ? '✓ Copied!' : '📋 Copy'}
-              </button>
-            </div>
+      {quote && (
+        <div className="p-3 bg-[#1E2125] border-b border-[#3A404A]">
+          <p className="text-xs text-[#AAB2BD] border-l-2 border-[#00D2B4] pl-2 italic line-clamp-3">
+            "{quote}"
+          </p>
+        </div>
+      )}
+
+      <div className="flex-1 relative bg-[#181A1E]">
+        {isLoading && pdfUrl && (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#181A1E] z-10">
+            <Loader2 className="w-6 h-6 animate-spin text-[#00D2B4]" />
           </div>
         )}
-
-        <div className="flex-1 overflow-hidden bg-[#0D1F3C] relative">
-          {/* Loading overlay */}
-          {isLoading && pdfUrl && (
-            <div className="absolute inset-0 flex items-center justify-center bg-[#0D1F3C] z-10">
-              <div className="flex flex-col items-center gap-3">
-                <Loader2 className="w-8 h-8 animate-spin text-[#6C63FF]" />
-                <p className="text-[#A8B2D1] text-sm">Loading document...</p>
-              </div>
-            </div>
-          )}
-          
-          {pdfUrl ? (
-            <iframe 
-              src={`${pdfUrl}#page=${pageNumber}`} 
-              className="w-full h-full border-0" 
-              title="PDF Viewer"
-              onLoad={() => setIsLoading(false)}
-            />
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full text-[#A8B2D1] p-8">
-              <BookOpen className="w-16 h-16 mb-4 text-[#1E3A5F]" />
-              <p className="text-lg font-medium text-[#E6F1FF]">PDF Not Available</p>
-              <p className="text-sm mt-2">Configure Supabase Storage to view source documents</p>
-            </div>
-          )}
-        </div>
+        {pdfUrl ? (
+          <iframe 
+            src={`${pdfUrl}#page=${pageNumber}`} 
+            className="w-full h-full border-0" 
+            title="PDF Viewer"
+            onLoad={() => setIsLoading(false)}
+          />
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full text-[#656D78]">
+            <BookOpen className="w-10 h-10 mb-2 opacity-50" />
+            <p className="text-sm">No PDF Selected</p>
+          </div>
+        )}
       </div>
-    </>
+    </div>
   );
 };
 
-// ============================================================================
-// CITATION LINK - Fixed for Q&A section (Issue #8)
-// ============================================================================
-const CitationLink = ({ sourceFile, pageNumber, quote, onOpenPDF }) => {
-  const handleClick = () => {
-    const pdfUrl = sourceFile ? `${CONFIG.SUPABASE_STORAGE_URL}${sourceFile}` : null;
-    console.log('Opening PDF:', { sourceFile, pageNumber, quote, pdfUrl }); // Debug log
-    onOpenPDF({
-      sourceFile,
-      pageNumber: pageNumber || 1,
-      quote,
-      pdfUrl
-    });
-  };
-
-  return (
-    <button
-      onClick={handleClick}
-      className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-[#1E3A5F] hover:bg-[#6C63FF]/30 rounded transition-colors text-[#A8B2D1] hover:text-[#00FFC6] border border-[#1E3A5F] hover:border-[#6C63FF]/50"
-    >
-      <FileText className="w-3 h-3" />
-      <span>p.{pageNumber || '?'}</span>
-    </button>
-  );
-};
-
-// ============================================================================
-// FILE UPLOAD COMPONENT - Made more compact (Issue #4)
-// ============================================================================
-const FileUploadSection = ({ onUploadSuccess }) => {
+// 2. FILE UPLOAD - Adaptive (Hero vs Compact)
+const FileUploadSection = ({ onUploadSuccess, variant = 'hero' }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState(null);
   const fileInputRef = useRef(null);
 
-  const handleDrop = async (e) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const file = e.dataTransfer.files[0];
-    if (file && file.type === 'application/pdf') {
-      await uploadFile(file);
-    }
-  };
-
-  const handleFileSelect = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      await uploadFile(file);
-    }
-  };
-
-  const uploadFile = async (file) => {
+  const handleUpload = async (file) => {
+    if (!file || file.type !== 'application/pdf') return;
     setIsUploading(true);
     setUploadStatus(null);
-
     try {
       const formData = new FormData();
       formData.append('Upload_Here', file);
-
-      const response = await fetch(CONFIG.INGESTION_FORM_URL, {
-        method: 'POST',
-        body: formData,
-      });
-
+      const response = await fetch(CONFIG.INGESTION_FORM_URL, { method: 'POST', body: formData });
       if (response.ok) {
-        setUploadStatus({ type: 'success', message: `${file.name} uploaded!` });
+        setUploadStatus({ type: 'success', message: 'Uploaded' });
         if (onUploadSuccess) onUploadSuccess();
-      } else {
-        throw new Error('Upload failed');
-      }
+      } else throw new Error('Failed');
     } catch (error) {
-      setUploadStatus({ type: 'error', message: `Failed: ${error.message}` });
+      setUploadStatus({ type: 'error', message: 'Error' });
     } finally {
       setIsUploading(false);
     }
   };
 
+  const containerClass = variant === 'hero' 
+    ? "bg-[#2C343C] p-8 rounded-2xl border border-[#3A404A] shadow-xl w-full max-w-lg text-center"
+    : "bg-[#2C343C] p-3 rounded-lg border border-[#3A404A]";
+
   return (
-    <div className="bg-[#112240] rounded-xl border border-[#1E3A5F] p-3">
-      <div className="flex items-center gap-2 mb-2">
-        <Upload className="w-4 h-4 text-[#6C63FF]" />
-        <h3 className="text-sm font-semibold text-[#E6F1FF]">Ingest Document</h3>
-      </div>
-      
+    <div className={containerClass}>
+      {variant === 'hero' && (
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold text-white mb-2">Upload Quarterly Earnings Transcripts</h2>
+          <p className="text-[#AAB2BD] text-sm">Upload a PDF to begin the automated analysis pipeline.</p>
+        </div>
+      )}
+
       <div
         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
         onDragLeave={() => setIsDragging(false)}
-        onDrop={handleDrop}
+        onDrop={(e) => { e.preventDefault(); setIsDragging(false); handleUpload(e.dataTransfer.files[0]); }}
         onClick={() => fileInputRef.current?.click()}
         className={`
-          border-2 border-dashed rounded-lg p-3 text-center cursor-pointer transition-all
-          ${isDragging 
-            ? 'border-[#00FFC6] bg-[#00FFC6]/10' 
-            : 'border-[#1E3A5F] hover:border-[#6C63FF] hover:bg-[#6C63FF]/5'}
+          border-2 border-dashed rounded-lg transition-all cursor-pointer flex flex-col items-center justify-center
+          ${variant === 'hero' ? 'p-10' : 'p-4'}
+          ${isDragging ? 'border-[#00D2B4] bg-[#00D2B4]/5' : 'border-[#3A404A] hover:border-[#656D78] hover:bg-[#353D46]'}
         `}
       >
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".pdf"
-          onChange={handleFileSelect}
-          className="hidden"
-        />
-        
+        <input ref={fileInputRef} type="file" accept=".pdf" onChange={(e) => handleUpload(e.target.files[0])} className="hidden" />
         {isUploading ? (
-          <div className="flex items-center justify-center gap-2">
-            <Loader2 className="w-5 h-5 animate-spin text-[#6C63FF]" />
-            <p className="text-xs text-[#A8B2D1]">Processing...</p>
-          </div>
+          <Loader2 className={`animate-spin text-[#00D2B4] ${variant === 'hero' ? 'w-10 h-10' : 'w-5 h-5'}`} />
         ) : (
-          <div className="flex items-center justify-center gap-2">
-            <Upload className={`w-5 h-5 ${isDragging ? 'text-[#00FFC6]' : 'text-[#697A9B]'}`} />
-            <p className="text-xs text-[#A8B2D1]">
-              Drop PDF or <span className="text-[#6C63FF]">browse</span>
+          <>
+            <Upload className={`text-[#AAB2BD] ${variant === 'hero' ? 'w-12 h-12 mb-3' : 'w-5 h-5 mb-1'}`} />
+            <p className="text-[#AAB2BD] text-sm font-medium">
+              {variant === 'hero' ? 'Drag & drop or browse' : 'Upload PDF'}
             </p>
-          </div>
+          </>
         )}
       </div>
 
-      {uploadStatus && (
-        <div className={`mt-2 p-2 rounded text-xs flex items-center gap-2 ${
-          uploadStatus.type === 'success' 
-            ? 'bg-[#00FFC6]/10 text-[#00FFC6]' 
-            : 'bg-[#FF6B7A]/10 text-[#FF6B7A]'
-        }`}>
-          {uploadStatus.type === 'success' ? <Check className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
-          <span className="truncate">{uploadStatus.message}</span>
+      {variant === 'hero' && (
+        <div className="mt-6 pt-4 border-t border-[#3A404A]">
+          <p className="text-[10px] text-[#656D78] uppercase tracking-wide">
+            This dashboard is custom-built using proprietary sector playbooks of First Ray Capital. Unauthorized access is prohibited.
+          </p>
         </div>
       )}
     </div>
   );
 };
 
-// ============================================================================
-// METRICS CARD - With consistent header styling (Issue #2)
-// ============================================================================
-const MetricsCard = ({ data, isLoading, error, quarters, onOpenPDF, onExport, ticker }) => {
-  // Filter metrics (Issue #3)
-  const filteredMetrics = data?.metrics ? filterMetrics(data.metrics) : [];
-  
-  if (isLoading) {
-    return (
-      <div className="bg-[#112240] rounded-xl border border-[#1E3A5F] p-6 h-full">
-        <div className="flex items-center justify-center h-full">
-          <Loader2 className="w-8 h-8 animate-spin text-[#6C63FF]" />
-          <span className="ml-2 text-[#A8B2D1]">Loading metrics...</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-[#112240] rounded-xl border border-[#FF6B7A]/30 p-6 h-full">
-        <div className="flex flex-col items-center justify-center h-full text-[#FF6B7A]">
-          <AlertCircle className="w-10 h-10 mb-2" />
-          <p className="font-medium">Error loading metrics</p>
-          <p className="text-sm text-[#A8B2D1] mt-1">{error}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!data || filteredMetrics.length === 0) {
-    return (
-      <div className="bg-[#112240] rounded-xl border border-[#1E3A5F] p-6 h-full">
-        <div className="flex flex-col items-center justify-center h-full text-[#A8B2D1]">
-          <TrendingUp className="w-10 h-10 mb-2 text-[#1E3A5F]" />
-          <p className="font-medium">No metrics data</p>
-          <p className="text-sm mt-1">Ingest documents to see metrics</p>
-        </div>
-      </div>
-    );
-  }
+// 3. METRICS CARD (Right Column)
+const MetricsCard = ({ data, isLoading, quarters, ticker }) => {
+  const filtered = data?.metrics ? filterMetrics(data.metrics) : [];
 
   return (
-    <div className="bg-[#112240] rounded-xl border border-[#1E3A5F] overflow-hidden h-full flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between p-3 border-b border-[#1E3A5F] shrink-0">
+    <div className="bg-[#2C343C] rounded-lg border border-[#3A404A] flex flex-col h-full shadow-sm overflow-hidden">
+      <div className="p-4 border-b border-[#3A404A] flex justify-between items-center bg-[#2C343C]">
         <div className="flex items-center gap-2">
-          <TrendingUp className="w-5 h-5 text-[#6C63FF]" />
-          <h3 className="font-semibold text-[#E6F1FF]">Key Metrics</h3>
+          <TrendingUp className="w-4 h-4 text-[#00D2B4]" />
+          <h3 className="font-semibold text-white">Key Metrics</h3>
         </div>
-        <button
-          onClick={() => onExport(data, ticker)}
-          className="flex items-center gap-1 px-3 py-1.5 text-xs bg-[#1E3A5F] hover:bg-[#6C63FF]/30 rounded-lg transition-colors text-[#A8B2D1] hover:text-[#00FFC6]"
-        >
-          <Download className="w-3 h-3" />
-          Export
-        </button>
+        <span className="text-xs text-[#656D78]">{ticker}</span>
       </div>
 
-      {/* Table */}
       <div className="overflow-auto flex-1">
-        <table className="w-full">
-          <thead className="sticky top-0 z-10">
-            {/* Issue #2: Consistent header styling with visual distinction */}
-            <tr className="bg-gradient-to-r from-[#1E3A5F] to-[#162D50]">
-              <th className="text-left py-3 px-4 text-sm font-bold text-[#E6F1FF] sticky left-0 bg-gradient-to-r from-[#1E3A5F] to-[#1E3A5F] z-20 border-b border-[#2D4A6F]">
-                Metric
-              </th>
-              {quarters.map((quarter) => (
-                <th key={quarter} className="text-right py-3 px-4 text-sm font-bold text-[#E6F1FF] min-w-28 border-b border-[#2D4A6F]">
-                  {quarter}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filteredMetrics.map((metric, idx) => (
-              <tr key={metric.metric_name} className="border-t border-[#1E3A5F]/50 hover:bg-[#1E3A5F]/20 transition-colors">
-                <td className="py-2.5 px-4 sticky left-0 bg-[#112240] z-10">
-                  <div className="font-medium text-[#E6F1FF] text-sm">{metric.metric_name}</div>
-                  {(metric.unit || metric.currency) && (
-                    <div className="text-xs text-[#697A9B]">
-                      {metric.currency && metric.currency !== '' ? `${metric.currency} ` : ''}{metric.unit}
-                    </div>
-                  )}
-                </td>
-                {quarters.map((quarter, qIdx) => {
-                  const quarterData = metric[quarter];
-                  const prevQuarter = quarters[qIdx + 1];
-                  const prevData = prevQuarter ? metric[prevQuarter] : null;
-                  const change = calculateChange(quarterData?.value, prevData?.value);
-                  
-                  return (
-                    <td key={quarter} className="text-right py-2.5 px-4">
-                      <div className="flex flex-col items-end gap-0.5">
-                        {formatValue(quarterData?.value, metric.currency, '')}
-                        {change !== null && qIdx === 0 && (
-                          <span className={`text-xs flex items-center gap-0.5 ${
-                            parseFloat(change) > 0 ? 'text-[#00FFC6]' : parseFloat(change) < 0 ? 'text-[#FF6B7A]' : 'text-[#A8B2D1]'
-                          }`}>
-                            {parseFloat(change) > 0 ? <ArrowUpRight className="w-3 h-3" /> : 
-                             parseFloat(change) < 0 ? <ArrowDownRight className="w-3 h-3" /> : 
-                             <Minus className="w-3 h-3" />}
-                            {Math.abs(parseFloat(change))}%
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                  );
-                })}
+        {isLoading ? (
+          <div className="flex items-center justify-center h-40"><Loader2 className="w-6 h-6 animate-spin text-[#00D2B4]" /></div>
+        ) : !data ? (
+          <div className="p-6 text-center text-[#656D78] text-sm">No metrics data loaded.</div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-[#222B35] sticky top-0 z-10">
+              <tr>
+                <th className="text-left py-3 px-4 font-medium text-[#AAB2BD] border-b border-[#3A404A]">Metric</th>
+                {quarters.map(q => (
+                  <th key={q} className="text-right py-3 px-4 font-medium text-[#AAB2BD] border-b border-[#3A404A]">{q}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filtered.map((m, i) => (
+                <tr key={i} className="border-b border-[#3A404A] hover:bg-[#353D46] transition-colors group">
+                  <td className="py-2.5 px-4 font-medium text-[#E0E0E0] group-hover:text-white">
+                    {m.metric_name}
+                    <div className="text-[10px] text-[#656D78] font-normal">{m.unit}</div>
+                  </td>
+                  {quarters.map((q, idx) => {
+                     const val = m[q]?.value;
+                     const prev = quarters[idx+1] ? m[quarters[idx+1]]?.value : null;
+                     const change = calculateChange(val, prev);
+                     return (
+                       <td key={q} className="text-right py-2.5 px-4">
+                         <div className="flex flex-col items-end">
+                           {formatValue(val, m.currency, '')}
+                           {change && idx === 0 && (
+                             <span className={`text-[10px] flex items-center ${parseFloat(change) > 0 ? 'text-[#00D2B4]' : 'text-[#FC6E6E]'}`}>
+                               {parseFloat(change) > 0 ? <ArrowUpRight className="w-3 h-3"/> : <ArrowDownRight className="w-3 h-3"/>}
+                               {Math.abs(change)}%
+                             </span>
+                           )}
+                         </div>
+                       </td>
+                     );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
 };
 
-// ============================================================================
-// GUIDANCE CARD - With quarters header (Issue #9)
-// ============================================================================
-const GuidanceCard = ({ data, isLoading, error, quarters, onOpenPDF }) => {
-  const [expandedThemes, setExpandedThemes] = useState({});
-
+// 4. GUIDANCE CARD (Left Column - Top)
+const GuidanceCard = ({ data, isLoading, quarters, onOpenPDF }) => {
+  const [expanded, setExpanded] = useState({});
+  const toggle = (t) => setExpanded(prev => ({ ...prev, [t]: !prev[t] }));
+  
+  // Auto-expand first theme on load
   useEffect(() => {
-    if (data?.themes) {
-      const initial = {};
-      data.themes.forEach((theme, idx) => {
-        initial[theme.theme] = idx === 0;
-      });
-      setExpandedThemes(initial);
+    if (data?.themes && Object.keys(expanded).length === 0) {
+        setExpanded({ [data.themes[0].theme]: true });
     }
   }, [data]);
 
-  const toggleTheme = (theme) => {
-    setExpandedThemes(prev => ({ ...prev, [theme]: !prev[theme] }));
-  };
-
-  const themeColors = {
-    EXPANSION: { icon: '🏗️', color: '#00FFC6' },
-    FINANCIAL: { icon: '💰', color: '#6C63FF' },
-    OPERATIONAL: { icon: '⚙️', color: '#FF9F43' },
-    CAPEX: { icon: '📊', color: '#A55EEA' },
-    REGULATORY: { icon: '📋', color: '#FF6B7A' },
-    DIGITAL: { icon: '💻', color: '#00E5FF' },
-    OTHER: { icon: '📌', color: '#A8B2D1' }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="bg-[#112240] rounded-xl border border-[#1E3A5F] p-6 h-full">
-        <div className="flex items-center justify-center h-full">
-          <Loader2 className="w-8 h-8 animate-spin text-[#6C63FF]" />
-          <span className="ml-2 text-[#A8B2D1]">Loading guidance...</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-[#112240] rounded-xl border border-[#FF6B7A]/30 p-6 h-full">
-        <div className="flex flex-col items-center justify-center h-full text-[#FF6B7A]">
-          <AlertCircle className="w-10 h-10 mb-2" />
-          <p className="font-medium">Error loading guidance</p>
-          <p className="text-sm text-[#A8B2D1] mt-1">{error}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!data || !data.themes || data.themes.length === 0) {
-    return (
-      <div className="bg-[#112240] rounded-xl border border-[#1E3A5F] p-6 h-full">
-        <div className="flex flex-col items-center justify-center h-full text-[#A8B2D1]">
-          <Calendar className="w-10 h-10 mb-2 text-[#1E3A5F]" />
-          <p className="font-medium">No guidance data</p>
-          <p className="text-sm mt-1">Ingest transcripts to see guidance</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="bg-[#112240] rounded-xl border border-[#1E3A5F] overflow-hidden h-full flex flex-col">
-      {/* Header with title */}
-      <div className="flex items-center gap-2 p-3 border-b border-[#1E3A5F] shrink-0">
-        <Calendar className="w-5 h-5 text-[#6C63FF]" />
-        <h3 className="font-semibold text-[#E6F1FF]">Forward Guidance</h3>
+    <div className="bg-[#2C343C] rounded-lg border border-[#3A404A] flex flex-col h-full shadow-sm overflow-hidden">
+      <div className="p-4 border-b border-[#3A404A] flex justify-between items-center bg-[#2C343C]">
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-[#44D9E6]" />
+          <h3 className="font-semibold text-white">Forward Guidance</h3>
+        </div>
       </div>
 
-      {/* Issue #9: Quarters header row */}
-      <div className="grid grid-cols-[1fr_repeat(4,minmax(100px,1fr))] bg-gradient-to-r from-[#1E3A5F] to-[#162D50] border-b border-[#2D4A6F] shrink-0">
-        <div className="py-2 px-3 text-sm font-bold text-[#E6F1FF]">Theme</div>
-        {quarters.map((quarter) => (
-          <div key={quarter} className="py-2 px-2 text-sm font-bold text-[#E6F1FF] text-center">
-            {quarter}
-          </div>
-        ))}
-      </div>
-
-      <div className="overflow-y-auto flex-1">
-        {data.themes.map((themeGroup) => {
-          const theme = themeColors[themeGroup.theme] || themeColors.OTHER;
-          return (
-            <div key={themeGroup.theme} className="border-b border-[#1E3A5F]/50 last:border-0">
-              <button
-                onClick={() => toggleTheme(themeGroup.theme)}
-                className="w-full flex items-center justify-between p-2.5 hover:bg-[#1E3A5F]/30 transition-colors"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-base">{theme.icon}</span>
-                  <span className="font-medium text-[#E6F1FF] text-sm">{themeGroup.theme}</span>
-                  <span className="text-xs text-[#697A9B] bg-[#0A192F] px-2 py-0.5 rounded-full">
-                    {themeGroup.items?.length || 0}
-                  </span>
-                </div>
-                {expandedThemes[themeGroup.theme] ? (
-                  <ChevronDown className="w-4 h-4 text-[#A8B2D1]" />
-                ) : (
-                  <ChevronRight className="w-4 h-4 text-[#A8B2D1]" />
+      <div className="overflow-y-auto flex-1 p-2">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-40"><Loader2 className="w-6 h-6 animate-spin text-[#44D9E6]" /></div>
+        ) : !data ? (
+          <div className="p-6 text-center text-[#656D78] text-sm">No guidance data loaded.</div>
+        ) : (
+          <div className="space-y-2">
+            {data.themes.map((group) => (
+              <div key={group.theme} className="bg-[#222B35] rounded border border-[#3A404A] overflow-hidden">
+                <button onClick={() => toggle(group.theme)} className="w-full flex items-center justify-between p-3 hover:bg-[#353D46]">
+                  <span className="font-medium text-sm text-[#E0E0E0]">{group.theme}</span>
+                  {expanded[group.theme] ? <ChevronDown className="w-4 h-4 text-[#AAB2BD]" /> : <ChevronRight className="w-4 h-4 text-[#AAB2BD]" />}
+                </button>
+                {expanded[group.theme] && (
+                  <div className="p-3 bg-[#1E2125] border-t border-[#3A404A] grid gap-4">
+                    {group.items.map((item, idx) => (
+                      <div key={idx} className="grid grid-cols-[1fr_3fr] gap-4 border-b border-[#3A404A] last:border-0 pb-3 last:pb-0">
+                         <div className="text-xs font-semibold text-[#44D9E6] pt-1">{item.subtheme}</div>
+                         <div className="space-y-3">
+                           {quarters.map(q => {
+                             const points = item[q];
+                             if (!points || !points.length) return null;
+                             return (
+                               <div key={q}>
+                                 <span className="text-[10px] font-bold text-[#656D78] uppercase mb-1 block">{q}</span>
+                                 {points.map((pt, i) => (
+                                   <div key={i} className="mb-2">
+                                     <p className="text-xs text-[#AAB2BD] leading-relaxed mb-1">{pt.guidance_text}</p>
+                                     <div className="flex items-center gap-2">
+                                       {pt.confidence_level && <span className={getConfidenceBadge(pt.confidence_level)}>{pt.confidence_level}</span>}
+                                       {(pt.source_file || pt.source_filename) && (
+                                         <button 
+                                           onClick={() => onOpenPDF({ sourceFile: pt.source_file || pt.source_filename, pageNumber: pt.page_number || pt.guidance_page_number, quote: pt.exact_quote, pdfUrl: `${CONFIG.SUPABASE_STORAGE_URL}${pt.source_file || pt.source_filename}` })}
+                                           className="text-[10px] text-[#44D9E6] hover:underline flex items-center gap-1"
+                                         >
+                                           <FileText className="w-3 h-3"/> Ref
+                                         </button>
+                                       )}
+                                     </div>
+                                   </div>
+                                 ))}
+                               </div>
+                             );
+                           })}
+                         </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
-              </button>
-              
-              {expandedThemes[themeGroup.theme] && (
-                <div className="px-2.5 pb-2.5">
-                  {themeGroup.items?.map((item, idx) => (
-                    <div key={idx} className="mb-2 last:mb-0">
-                      <div className="text-xs font-medium text-[#A8B2D1] mb-1.5 flex items-center gap-1 pl-1">
-                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: theme.color }} />
-                        {item.subtheme}
-                      </div>
-                      {/* Issue #9: Grid layout matching header columns, removed individual quarter labels */}
-                      <div className="grid grid-cols-[1fr_repeat(4,minmax(100px,1fr))] gap-1">
-                        <div></div> {/* Empty cell to align with theme column */}
-                        {quarters.map((quarter) => {
-                          const guidanceList = item[quarter];
-                          return (
-                            <div key={quarter} className="bg-[#0A192F] rounded-lg p-2 min-h-[50px]">
-                              {guidanceList && Array.isArray(guidanceList) && guidanceList.length > 0 ? (
-                                guidanceList.map((g, gIdx) => (
-                                  <div key={gIdx} className="text-xs text-[#E6F1FF] mb-2 last:mb-0">
-                                    <p className="line-clamp-3 mb-1">{g.guidance_text}</p>
-                                    <div className="flex items-center gap-1 flex-wrap">
-                                      {g.confidence_level && (
-                                        <span className={`text-[10px] px-1.5 py-0.5 rounded border ${
-                                          getConfidenceBadge(g.confidence_level).bg
-                                        } ${getConfidenceBadge(g.confidence_level).text} ${
-                                          getConfidenceBadge(g.confidence_level).border
-                                        }`}>
-                                          {g.confidence_level}
-                                        </span>
-                                      )}
-                                      {(g.source_file || g.source_filename) && (
-                                        <CitationLink 
-                                          sourceFile={g.source_file || g.source_filename}
-                                          pageNumber={g.page_number || g.guidance_page_number}
-                                          quote={g.exact_quote}
-                                          onOpenPDF={onOpenPDF}
-                                        />
-                                      )}
-                                    </div>
-                                  </div>
-                                ))
-                              ) : (
-                                <span className="text-[#5A6A8A] text-xs">—</span>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
-// ============================================================================
-// CHAT CARD - Fixed scrolling and citations (Issues #6, #8)
-// ============================================================================
+// 5. CHAT CARD (Left Column - Bottom)
 const ChatCard = ({ ticker, onOpenPDF }) => {
-  const [messages, setMessages] = useState([
-    {
-      role: 'assistant',
-      content: `Ask me anything about ${ticker}'s earnings, guidance, or operational metrics.`
-    }
-  ]);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const messagesEndRef = useRef(null);
-  const messagesContainerRef = useRef(null);
+  const [loading, setLoading] = useState(false);
+  const scrollRef = useRef(null);
 
-  // Issue #6: Scroll only within the messages container, not the whole page
-  useEffect(() => {
-    if (messagesContainerRef.current) {
-      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-    }
-  }, [messages]);
-
-  useEffect(() => {
-    setMessages([{
-      role: 'assistant',
-      content: `Ask me anything about ${ticker}'s earnings, guidance, or operational metrics.`
-    }]);
+  useEffect(() => { 
+    setMessages([{ role: 'assistant', content: `Analyze ${ticker} earnings & transcripts.` }]);
   }, [ticker]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    e.stopPropagation(); // Issue #6: Prevent event bubbling
-    
-    if (!input.trim() || isLoading) return;
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [messages]);
 
-    const userMessage = input.trim();
+  const handleSend = async (e) => {
+    e.preventDefault();
+    if (!input.trim() || loading) return;
+    const userMsg = input.trim();
     setInput('');
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
-    setIsLoading(true);
+    setMessages(p => [...p, { role: 'user', content: userMsg }]);
+    setLoading(true);
 
     try {
-      const response = await fetch(CONFIG.CHAT_ENDPOINT, {
+      const res = await fetch(CONFIG.CHAT_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chatInput: userMessage, ticker })
+        body: JSON.stringify({ chatInput: userMsg, ticker })
       });
-
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const data = await response.json();
-      
-      // Issue #8: Handle both array and direct object response formats
-      let output, citations;
-      
-      if (Array.isArray(data)) {
-        // Response is an array - take first item
-        const firstItem = data[0] || {};
-        output = firstItem.output || firstItem.response || firstItem.text || '';
-        citations = firstItem.citations || [];
-      } else {
-        // Response is a direct object
-        output = data.output || data.response || data.text || JSON.stringify(data);
-        citations = data.citations || [];
-      }
-      
-      // Issue #8: Map citation fields correctly
-      const mappedCitations = citations.map(c => ({
+      const data = await res.json();
+      // Handle array or object response
+      const result = Array.isArray(data) ? data[0] : data;
+      const output = result.output || result.response || result.text || '';
+      const citations = (result.citations || []).map(c => ({
         sourceFile: c.source_file || c.source || c.sourceFile,
         pageNumber: c.page_number || c.page || c.pageNumber,
         quote: c.quote || c.exact_quote
       }));
-      
-      console.log('Chat response:', { output, citations: mappedCitations }); // Debug log
-      
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: output,
-        citations: mappedCitations
-      }]);
-    } catch (error) {
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: `Error: ${error.message}`,
-        isError: true
-      }]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  // Issue #6: Prevent Enter key from scrolling page
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit(e);
+      setMessages(p => [...p, { role: 'assistant', content: output, citations }]);
+    } catch (err) {
+      setMessages(p => [...p, { role: 'assistant', content: 'Error connecting to agent.' }]);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="bg-[#112240] rounded-xl border border-[#1E3A5F] overflow-hidden flex flex-col h-full">
-      <div className="flex items-center gap-2 p-3 border-b border-[#1E3A5F] shrink-0">
-        <MessageSquare className="w-5 h-5 text-[#6C63FF]" />
-        <h3 className="font-semibold text-[#E6F1FF]">Ask Questions</h3>
+    <div className="bg-[#2C343C] rounded-lg border border-[#3A404A] flex flex-col h-full shadow-sm overflow-hidden">
+      <div className="p-4 border-b border-[#3A404A] bg-[#2C343C] flex gap-2 items-center">
+        <MessageSquare className="w-4 h-4 text-[#9F7AEA]" />
+        <h3 className="font-semibold text-white">Q&A Assistant</h3>
       </div>
-
-      {/* Issue #6: Added ref to messages container for controlled scrolling */}
-      <div 
-        ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto p-3 space-y-2"
-        style={{ scrollBehavior: 'smooth' }}
-      >
-        {messages.map((message, idx) => (
-          <div key={idx} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[85%] rounded-lg p-2.5 text-sm ${
-              message.role === 'user'
-                ? 'bg-[#6C63FF] text-white'
-                : message.isError
-                ? 'bg-[#FF6B7A]/20 border border-[#FF6B7A]/30 text-[#FF6B7A]'
-                : 'bg-[#0A192F] border border-[#1E3A5F] text-[#E6F1FF]'
+      
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#1E2125]">
+        {messages.map((m, i) => (
+          <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div className={`max-w-[90%] rounded-lg p-3 text-sm leading-relaxed ${
+              m.role === 'user' 
+                ? 'bg-[#3A404A] text-white border border-[#4E5660]' 
+                : 'bg-[#2C343C] text-[#AAB2BD] border border-[#3A404A]'
             }`}>
-              <p className="whitespace-pre-wrap">{message.content}</p>
-              {/* Issue #8: Fixed citation rendering with correct field names */}
-              {message.citations?.length > 0 && (
-                <div className="mt-2 pt-2 border-t border-[#1E3A5F] flex flex-wrap gap-1">
-                  {message.citations.map((c, i) => (
-                    <CitationLink 
-                      key={i} 
-                      sourceFile={c.sourceFile} 
-                      pageNumber={c.pageNumber} 
-                      quote={c.quote} 
-                      onOpenPDF={onOpenPDF} 
-                    />
+              <p className="whitespace-pre-wrap">{m.content}</p>
+              {m.citations?.length > 0 && (
+                <div className="mt-3 pt-2 border-t border-[#3A404A] flex flex-wrap gap-2">
+                  {m.citations.map((c, idx) => (
+                    <button 
+                      key={idx}
+                      onClick={() => onOpenPDF({ sourceFile: c.sourceFile, pageNumber: c.pageNumber, quote: c.quote, pdfUrl: `${CONFIG.SUPABASE_STORAGE_URL}${c.sourceFile}` })}
+                      className="text-[10px] px-2 py-1 bg-[#1E2125] border border-[#3A404A] rounded text-[#44D9E6] hover:border-[#44D9E6] transition-colors flex items-center gap-1"
+                    >
+                      <FileText className="w-3 h-3"/> p.{c.pageNumber}
+                    </button>
                   ))}
                 </div>
               )}
             </div>
           </div>
         ))}
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className="bg-[#0A192F] border border-[#1E3A5F] rounded-lg p-2.5">
-              <Loader2 className="w-4 h-4 animate-spin text-[#6C63FF]" />
-            </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
+        {loading && <Loader2 className="w-4 h-4 animate-spin text-[#9F7AEA]" />}
       </div>
 
-      {/* Issue #6: Form with prevented default behavior */}
-      <form onSubmit={handleSubmit} className="p-2.5 border-t border-[#1E3A5F] shrink-0">
+      <form onSubmit={handleSend} className="p-3 bg-[#222B35] border-t border-[#3A404A]">
         <div className="flex gap-2">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Ask about earnings, guidance..."
-            className="flex-1 px-3 py-2 bg-[#0A192F] border border-[#1E3A5F] rounded-lg text-sm text-[#E6F1FF] placeholder-[#697A9B] focus:outline-none focus:border-[#6C63FF]"
-            disabled={isLoading}
+          <input 
+            value={input} 
+            onChange={e => setInput(e.target.value)}
+            placeholder="Ask about margins, guidance, or strategy..."
+            className="flex-1 bg-[#181A1E] border border-[#3A404A] rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-[#9F7AEA]"
           />
-          <button
-            type="submit"
-            disabled={isLoading || !input.trim()}
-            className="px-3 py-2 bg-[#6C63FF] hover:bg-[#5A52D5] disabled:opacity-50 rounded-lg transition-colors"
-          >
-            <Send className="w-4 h-4 text-white" />
+          <button type="submit" disabled={loading || !input} className="bg-[#9F7AEA] hover:bg-[#805AD5] text-white p-2 rounded transition-colors disabled:opacity-50">
+            <Send className="w-4 h-4" />
           </button>
         </div>
       </form>
@@ -858,228 +471,136 @@ const ChatCard = ({ ticker, onOpenPDF }) => {
 };
 
 // ============================================================================
-// MAIN DASHBOARD - Expanded width (Issue #1) & Company headline (Issue #5)
+// MAIN APP COMPONENT
 // ============================================================================
 export default function App() {
-  const [selectedSector, setSelectedSector] = useState('Healthcare');
-  const [selectedTicker, setSelectedTicker] = useState('MAXHEALTH');
-  const [metricsData, setMetricsData] = useState(null);
-  const [guidanceData, setGuidanceData] = useState(null);
-  const [isLoadingMetrics, setIsLoadingMetrics] = useState(false);
-  const [isLoadingGuidance, setIsLoadingGuidance] = useState(false);
-  const [metricsError, setMetricsError] = useState(null);
-  const [guidanceError, setGuidanceError] = useState(null);
-  
-  const [pdfViewer, setPdfViewer] = useState({
-    isOpen: false, pdfUrl: null, pageNumber: 1, quote: null, sourceFile: null
-  });
+  const [sector, setSector] = useState('Healthcare');
+  const [ticker, setTicker] = useState('MAXHEALTH');
+  const [metrics, setMetrics] = useState(null);
+  const [guidance, setGuidance] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [pdfViewer, setPdfViewer] = useState({ isOpen: false, pdfUrl: null });
 
-  const openPDF = (data) => setPdfViewer({ isOpen: true, ...data });
-  const closePDF = () => setPdfViewer(prev => ({ ...prev, isOpen: false }));
+  // Reset when sector changes
+  useEffect(() => {
+    const list = CONFIG.SECTORS[sector] || [];
+    if (list.length && !list.includes(ticker)) setTicker(list[0]);
+  }, [sector]);
 
-  const availableTickers = CONFIG.SECTORS[selectedSector] || [];
-
-  const fetchData = async (ticker) => {
-    setIsLoadingMetrics(true);
-    setIsLoadingGuidance(true);
-    setMetricsError(null);
-    setGuidanceError(null);
-
+  const loadData = async () => {
+    setLoading(true);
     try {
-      const response = await fetch(CONFIG.METRICS_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticker })
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      setMetricsData(await response.json());
-    } catch (error) {
-      setMetricsError(error.message);
-      setMetricsData(null);
+      // Fetch concurrently
+      const [mRes, gRes] = await Promise.all([
+        fetch(CONFIG.METRICS_ENDPOINT, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ticker }) }),
+        fetch(CONFIG.GUIDANCE_ENDPOINT, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ticker }) })
+      ]);
+      if (mRes.ok) setMetrics(await mRes.json());
+      if (gRes.ok) setGuidance(await gRes.json());
+    } catch (e) {
+      console.error(e);
     } finally {
-      setIsLoadingMetrics(false);
-    }
-
-    try {
-      const response = await fetch(CONFIG.GUIDANCE_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticker })
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      setGuidanceData(await response.json());
-    } catch (error) {
-      setGuidanceError(error.message);
-      setGuidanceData(null);
-    } finally {
-      setIsLoadingGuidance(false);
+      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (selectedTicker) {
-      fetchData(selectedTicker);
-    }
-  }, [selectedTicker]);
-
-  useEffect(() => {
-    const tickers = CONFIG.SECTORS[selectedSector] || [];
-    if (tickers.length > 0 && !tickers.includes(selectedTicker)) {
-      setSelectedTicker(tickers[0]);
-    }
-  }, [selectedSector]);
-
-  const displayQuarters = metricsData?.quarters || guidanceData?.quarters || CONFIG.DISPLAY_QUARTERS;
-  
-  // Issue #5: Get company display name
-  const companyName = CONFIG.COMPANY_NAMES[selectedTicker] || selectedTicker;
+  // State: Has Data Loaded?
+  const hasData = metrics || guidance;
 
   return (
-    // Issue #1: Full height layout to prevent external scrolling
-    <div className="h-screen flex flex-col overflow-hidden" style={{ backgroundColor: THEME.bg.primary }}>
-      <PDFViewerPanel {...pdfViewer} onClose={closePDF} />
-
-      {/* Header - Compact */}
-      <header className="border-b border-[#1E3A5F] shrink-0" style={{ backgroundColor: THEME.bg.secondary }}>
-        {/* Issue #1: Reduced padding, expanded width */}
-        <div className="w-full px-3 py-2">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            {/* Logo */}
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg" style={{ 
-                background: `linear-gradient(135deg, ${THEME.accent.primary}, ${THEME.accent.secondary})`,
-                boxShadow: THEME.glow.primary
-              }}>
-                <Brain className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-base font-bold" style={{ color: THEME.text.primary }}>
-                  Financial Analysis Agent
-                </h1>
-              </div>
-            </div>
-
-            {/* Controls */}
-            <div className="flex items-center gap-3">
-              {/* Sector Select */}
-              <div className="flex flex-col">
-                <label className="text-[10px] uppercase tracking-wider mb-0.5" style={{ color: THEME.text.tertiary }}>
-                  Sector
-                </label>
-                <select
-                  value={selectedSector}
-                  onChange={(e) => setSelectedSector(e.target.value)}
-                  className="px-2 py-1 rounded-lg text-sm font-medium border focus:outline-none focus:ring-2"
-                  style={{ 
-                    backgroundColor: THEME.bg.input,
-                    borderColor: THEME.border,
-                    color: THEME.text.primary,
-                  }}
-                >
-                  {Object.keys(CONFIG.SECTORS).map(sector => (
-                    <option key={sector} value={sector}>{sector}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Ticker Select */}
-              <div className="flex flex-col">
-                <label className="text-[10px] uppercase tracking-wider mb-0.5" style={{ color: THEME.text.tertiary }}>
-                  Company
-                </label>
-                <select
-                  value={selectedTicker}
-                  onChange={(e) => setSelectedTicker(e.target.value)}
-                  disabled={availableTickers.length === 0}
-                  className="px-2 py-1 rounded-lg text-sm font-medium border focus:outline-none focus:ring-2 disabled:opacity-50"
-                  style={{ 
-                    backgroundColor: THEME.bg.input,
-                    borderColor: THEME.border,
-                    color: THEME.accent.highlight,
-                  }}
-                >
-                  {availableTickers.length > 0 ? (
-                    availableTickers.map(ticker => (
-                      <option key={ticker} value={ticker}>{ticker}</option>
-                    ))
-                  ) : (
-                    <option value="">No companies</option>
-                  )}
-                </select>
-              </div>
-
-              {/* Refresh */}
-              <button
-                onClick={() => fetchData(selectedTicker)}
-                disabled={isLoadingMetrics || isLoadingGuidance}
-                className="p-1.5 rounded-lg transition-colors hover:bg-[#1E3A5F] disabled:opacity-50 self-end"
-                style={{ color: THEME.text.secondary }}
-              >
-                <RefreshCw className={`w-4 h-4 ${(isLoadingMetrics || isLoadingGuidance) ? 'animate-spin' : ''}`} />
-              </button>
-            </div>
+    <div className="h-screen flex flex-col bg-[#1E2125] text-[#AAB2BD] font-sans overflow-hidden">
+      
+      {/* GLOBAL HEADER */}
+      <header className="h-[56px] border-b border-[#3A404A] bg-[#222B35] flex items-center justify-between px-4 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded bg-gradient-to-br from-[#00D2B4] to-[#44D9E6] flex items-center justify-center text-[#1E2125]">
+            <Brain className="w-5 h-5" />
           </div>
+          <h1 className="font-bold text-white tracking-tight">Financial Analysis Agent</h1>
+        </div>
+
+        {/* Header Controls */}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <select 
+              value={sector} onChange={e => setSector(e.target.value)}
+              className="bg-[#181A1E] border border-[#3A404A] text-white text-xs py-1.5 px-2 rounded focus:outline-none"
+            >
+              {Object.keys(CONFIG.SECTORS).map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <select 
+              value={ticker} onChange={e => setTicker(e.target.value)}
+              className="bg-[#181A1E] border border-[#3A404A] text-[#00D2B4] font-medium text-xs py-1.5 px-2 rounded focus:outline-none"
+            >
+              {(CONFIG.SECTORS[sector] || []).map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          <button 
+            onClick={loadData} disabled={loading}
+            className="p-1.5 bg-[#3A404A] rounded hover:bg-[#00D2B4] hover:text-[#1E2125] transition-colors text-white"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
         </div>
       </header>
 
-      {/* Issue #5: Company Name Headline */}
-      <div className="px-3 py-2 border-b border-[#1E3A5F]/50 shrink-0" style={{ backgroundColor: THEME.bg.primary }}>
-        <div className="flex items-center gap-2">
-          <Building2 className="w-5 h-5 text-[#6C63FF]" />
-          <h2 className="text-lg font-bold text-[#E6F1FF]">{companyName}</h2>
-          <span className="text-sm text-[#A8B2D1] bg-[#1E3A5F] px-2 py-0.5 rounded-full">{selectedTicker}</span>
-        </div>
-      </div>
-
-      {/* Main Content - Issue #1: Expanded width with minimal margins, Issue #3: Half-half height */}
-      <main className="flex-1 overflow-hidden px-3 py-3">
-        {/* Issue #1: Changed to w-full and reduced gap */}
-        <div className="h-full grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-3">
-          
-          {/* Left Column - Metrics + Guidance - Issue #3: Equal height split */}
-          <div className="flex flex-col gap-3 min-h-0">
-            {/* Issue #3: Each section takes ~50% of available height */}
-            <div className="flex-1 min-h-0">
-              <MetricsCard
-                data={metricsData}
-                isLoading={isLoadingMetrics}
-                error={metricsError}
-                quarters={displayQuarters}
-                onOpenPDF={openPDF}
-                onExport={exportToCSV}
-                ticker={selectedTicker}
-              />
-            </div>
+      {/* BODY */}
+      <main className="flex-1 overflow-hidden relative">
+        
+        {/* VIEW 1: LANDING PAGE (No Data) */}
+        {!hasData && (
+          <div className="h-full flex flex-col items-center justify-center p-4 animate-in fade-in duration-500">
+            <FileUploadSection onUploadSuccess={loadData} variant="hero" />
             
-            <div className="flex-1 min-h-0">
-              <GuidanceCard
-                data={guidanceData}
-                isLoading={isLoadingGuidance}
-                error={guidanceError}
-                quarters={displayQuarters}
-                onOpenPDF={openPDF}
+            {loading && (
+               <div className="mt-8 flex items-center gap-2 text-[#00D2B4]">
+                 <Loader2 className="animate-spin w-5 h-5" />
+                 <span>Initializing Sector Playbooks...</span>
+               </div>
+            )}
+          </div>
+        )}
+
+        {/* VIEW 2: DASHBOARD (Data Loaded) */}
+        {hasData && (
+          <div className="h-full w-full p-4 grid grid-cols-1 lg:grid-cols-[65%_35%] gap-4 animate-in slide-in-from-bottom-4 duration-500">
+            
+            {/* LEFT COLUMN: GUIDANCE & CHAT (Flex-grow) */}
+            <div className="flex flex-col gap-4 h-full min-h-0">
+              {/* Guidance - Top Half */}
+              <div className="flex-1 min-h-0">
+                 <GuidanceCard 
+                   data={guidance} 
+                   isLoading={loading} 
+                   quarters={metrics?.quarters || CONFIG.DISPLAY_QUARTERS} 
+                   onOpenPDF={(d) => setPdfViewer({ isOpen: true, ...d })} 
+                 />
+              </div>
+              {/* Chat - Bottom Half */}
+              <div className="flex-[0.8] min-h-0">
+                 <ChatCard ticker={ticker} onOpenPDF={(d) => setPdfViewer({ isOpen: true, ...d })} />
+              </div>
+            </div>
+
+            {/* RIGHT COLUMN: METRICS (Fixed width approx) */}
+            <div className="flex flex-col h-full min-h-0">
+              <MetricsCard 
+                data={metrics} 
+                isLoading={loading} 
+                quarters={metrics?.quarters || CONFIG.DISPLAY_QUARTERS} 
+                ticker={ticker} 
               />
             </div>
           </div>
+        )}
 
-          {/* Right Column - Upload (compact) + Chat (expanded) - Issue #4 */}
-          <div className="flex flex-col gap-3 min-h-0">
-            {/* Issue #4: Compact upload section - shrink-0 keeps it small */}
-            <div className="shrink-0">
-              <FileUploadSection onUploadSuccess={() => setTimeout(() => fetchData(selectedTicker), 5000)} />
-            </div>
-            {/* Chat takes remaining space */}
-            <div className="flex-1 min-h-0">
-              <ChatCard ticker={selectedTicker} onOpenPDF={openPDF} />
-            </div>
-          </div>
-        </div>
+        {/* PDF OVERLAY - Slides in from right, covers RIGHT COLUMN */}
+        <PDFViewerPanel 
+          {...pdfViewer} 
+          onClose={() => setPdfViewer(p => ({ ...p, isOpen: false }))} 
+        />
+        
       </main>
-
-      {/* Footer - Compact */}
-      <div className="py-1.5 text-center text-xs shrink-0 border-t border-[#1E3A5F]/30" style={{ color: THEME.text.muted }}>
-        <p>Powered by AI • Data extracted from earnings calls & investor presentations</p>
-      </div>
     </div>
   );
 }
