@@ -2,19 +2,20 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Send, FileText, TrendingUp, MessageSquare, ChevronDown, ChevronRight, 
   ExternalLink, Loader2, Building2, Calendar, RefreshCw, X, AlertCircle,
-  BookOpen, Upload, Download, Brain, ArrowUpRight, ArrowDownRight, Minus, Check
+  BookOpen, Upload, Download, Zap, Database, Brain, Activity,
+  Plus, Check, ArrowUpRight, ArrowDownRight, Minus
 } from 'lucide-react';
 
 // ============================================================================
-// CONFIGURATION - Update with your actual URLs
+// CONFIGURATION - Your endpoints remain unchanged
 // ============================================================================
 const CONFIG = {
-  // Your n8n webhook URLs
+  // Your n8n webhook URLs (KEEP THESE - they're working)
   METRICS_ENDPOINT: 'https://juhi.app.n8n.cloud/webhook/metrics-compare',
   GUIDANCE_ENDPOINT: 'https://juhi.app.n8n.cloud/webhook/guidance-compare',
   CHAT_ENDPOINT: 'https://juhi.app.n8n.cloud/webhook/chat',
   
-  // Ingestion Pipeline Form URL
+  // Ingestion Pipeline Form URL (update with your actual form URL)
   INGESTION_FORM_URL: 'https://juhi.app.n8n.cloud/form/cc79e7b5-c57c-41eb-85a4-98ed363ea3bd',
   
   // Supabase Storage URL for PDFs
@@ -31,40 +32,59 @@ const CONFIG = {
     'QSR': [],
   },
   
-  // Metrics to HIDE from display (removed as per user request)
-  HIDDEN_METRICS: ['Revenue', 'EBITDA'],
+  // Company display names
+  COMPANY_NAMES: {
+    'MAXHEALTH': 'Max Healthcare Institute Ltd',
+    'APOLLOHOSP': 'Apollo Hospitals Enterprise Ltd',
+    'FORTIS': 'Fortis Healthcare Ltd',
+    'ASTERDM': 'Aster DM Healthcare Ltd',
+    'HCG': 'Healthcare Global Enterprises Ltd',
+    'NH': 'Narayana Hrudayalaya Ltd',
+    'JLHL': 'Jupiter Life Line Hospitals Ltd',
+    'KIMS': 'Krishna Institute of Medical Sciences Ltd',
+    'RAINBOW': 'Rainbow Children\'s Medicare Ltd',
+  },
+  
+  // Metrics to exclude from display (Issue #3)
+  EXCLUDED_METRICS: ['Revenue', 'EBITDA', 'Gross Revenue', 'Net Revenue'],
   
   // Display quarters
   DISPLAY_QUARTERS: ['FY26-Q2', 'FY26-Q1', 'FY25-Q4', 'FY25-Q3'],
 };
 
 // ============================================================================
-// THEME COLORS
+// THEME COLORS - Improved contrast (Issue #10)
 // ============================================================================
 const THEME = {
   bg: {
-    primary: '#0A192F',
-    secondary: '#112240',
-    tertiary: '#1E3A5F',
-    input: '#0D1F3C',
+    primary: '#0A192F',      // Deep Navy - main background
+    secondary: '#112240',    // Slightly lighter - cards
+    tertiary: '#1E3A5F',     // Even lighter - hover states
+    input: '#0D1F3C',        // Input backgrounds
   },
   text: {
-    primary: '#E6F1FF',
-    secondary: '#8892B0',
-    tertiary: '#495670',
+    primary: '#E6F1FF',      // Main text - bright
+    secondary: '#A8B2D1',    // Muted text - IMPROVED CONTRAST
+    tertiary: '#697A9B',     // Dimmer text - IMPROVED CONTRAST
+    muted: '#5A6A8A',        // Very muted - IMPROVED CONTRAST
   },
   accent: {
-    primary: '#6C63FF',
-    secondary: '#4D7CFF',
-    highlight: '#00FFC6',
-    cyan: '#00E5FF',
+    primary: '#6C63FF',      // Electric Violet - primary actions
+    secondary: '#4D7CFF',    // Electric Blue - secondary
+    highlight: '#00FFC6',    // Neon Mint - highlights/positive
+    cyan: '#00E5FF',         // Cyan - accents
   },
   semantic: {
-    positive: '#00FFC6',
-    negative: '#FF4757',
-    warning: '#FFD93D',
+    positive: '#00FFC6',     // Mint green
+    negative: '#FF6B7A',     // Softer coral - IMPROVED VISIBILITY
+    warning: '#FFD93D',      // Warm yellow
+    info: '#4D7CFF',         // Blue
   },
   border: '#1E3A5F',
+  glow: {
+    primary: '0 0 20px rgba(108, 99, 255, 0.3)',
+    accent: '0 0 20px rgba(0, 255, 198, 0.2)',
+  }
 };
 
 // ============================================================================
@@ -83,16 +103,22 @@ const getConfidenceBadge = (level) => {
   return styles[level?.toUpperCase()] || styles.DEFAULT;
 };
 
-const formatValue = (value, currency) => {
+const formatValue = (value, currency, unit) => {
   if (value === null || value === undefined || value === '') {
-    return <span className="text-[#495670]">—</span>;
+    return <span className="text-[#5A6A8A]">—</span>;
   }
   const numValue = typeof value === 'string' ? parseFloat(value.replace(/,/g, '')) : value;
   const prefix = currency === 'INR' ? '₹' : '';
+  const suffix = unit ? ` ${unit}` : '';
   const formattedValue = numValue.toLocaleString('en-IN');
-  return <span className="font-semibold text-[#E6F1FF]">{prefix}{formattedValue}</span>;
+  return (
+    <span className="font-medium text-[#E6F1FF]">
+      {prefix}{formattedValue}{suffix}
+    </span>
+  );
 };
 
+// Calculate QoQ change
 const calculateChange = (current, previous) => {
   if (!current || !previous) return null;
   const curr = parseFloat(String(current).replace(/,/g, ''));
@@ -101,13 +127,23 @@ const calculateChange = (current, previous) => {
   return ((curr - prev) / prev * 100).toFixed(1);
 };
 
+// Export to CSV
 const exportToCSV = (data, filename) => {
-  if (!data || !data.metrics) return;
+  if (!data || !data.metrics || data.metrics.length === 0) return;
+  
   const quarters = data.quarters || [];
-  const headers = ['Metric', 'Unit', ...quarters];
-  const rows = data.metrics.map(m => [
-    m.metric_name, m.unit || '', ...quarters.map(q => m[q]?.value || '')
-  ].join(','));
+  const headers = ['Metric', 'Unit', 'Currency', ...quarters];
+  
+  const rows = data.metrics.map(metric => {
+    const row = [
+      metric.metric_name,
+      metric.unit || '',
+      metric.currency || '',
+      ...quarters.map(q => metric[q]?.value || '')
+    ];
+    return row.join(',');
+  });
+  
   const csv = [headers.join(','), ...rows].join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
@@ -118,11 +154,29 @@ const exportToCSV = (data, filename) => {
   URL.revokeObjectURL(url);
 };
 
+// Filter out excluded metrics (Issue #3)
+const filterMetrics = (metrics) => {
+  if (!metrics) return [];
+  return metrics.filter(metric => {
+    const metricName = metric.metric_name?.toLowerCase() || '';
+    return !CONFIG.EXCLUDED_METRICS.some(excluded => 
+      metricName.includes(excluded.toLowerCase())
+    );
+  });
+};
+
 // ============================================================================
-// PDF VIEWER PANEL - Smoother transition
+// PDF VIEWER PANEL - Improved transitions (Issue #7)
 // ============================================================================
 const PDFViewerPanel = ({ isOpen, onClose, pdfUrl, pageNumber, quote, sourceFile }) => {
   const [copied, setCopied] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  useEffect(() => {
+    if (isOpen) {
+      setIsLoading(true);
+    }
+  }, [isOpen, pdfUrl]);
 
   const copyQuote = () => {
     if (quote) {
@@ -134,54 +188,78 @@ const PDFViewerPanel = ({ isOpen, onClose, pdfUrl, pageNumber, quote, sourceFile
 
   return (
     <>
-      {/* Backdrop - smoother */}
+      {/* Backdrop with smooth transition */}
       <div 
-        className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity duration-300 ${
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-300 ${
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
-        onClick={onClose}
+        onClick={onClose} 
       />
       
-      {/* Panel - smoother slide */}
-      <div className={`fixed right-0 top-0 h-full w-full md:w-[600px] bg-[#0A192F] shadow-2xl z-50 flex flex-col border-l border-[#1E3A5F] transition-transform duration-300 ease-out ${
-        isOpen ? 'translate-x-0' : 'translate-x-full'
-      }`}>
-        {/* Header */}
+      {/* Panel with slide-in transition */}
+      <div 
+        className={`fixed right-0 top-0 h-full w-full md:w-2/3 lg:w-1/2 bg-[#0A192F] shadow-2xl z-50 flex flex-col border-l border-[#1E3A5F] transform transition-transform duration-300 ease-out ${
+          isOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
         <div className="flex items-center justify-between p-4 border-b border-[#1E3A5F] bg-[#112240]">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-[#6C63FF] rounded-lg">
-              <FileText className="w-4 h-4 text-white" />
+              <FileText className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="font-semibold text-[#E6F1FF] text-sm">{sourceFile || 'Document'}</h3>
-              <p className="text-xs text-[#8892B0]">Page {pageNumber}</p>
+              <h3 className="font-semibold text-[#E6F1FF]">{sourceFile || 'Document'}</h3>
+              <p className="text-sm text-[#A8B2D1]">Page {pageNumber}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-[#1E3A5F] rounded-lg transition-colors">
-            <X className="w-5 h-5 text-[#8892B0]" />
+            <X className="w-5 h-5 text-[#A8B2D1]" />
           </button>
         </div>
 
-        {/* Quote */}
         {quote && (
-          <div className="p-3 bg-[#6C63FF]/10 border-b border-[#1E3A5F]">
-            <p className="text-xs text-[#00FFC6] font-medium mb-1">📌 Referenced Quote</p>
-            <p className="text-xs text-[#E6F1FF] italic leading-relaxed">"{quote}"</p>
-            <button onClick={copyQuote} className="mt-2 text-xs text-[#6C63FF] hover:text-[#00FFC6]">
-              {copied ? '✓ Copied!' : '📋 Copy quote'}
-            </button>
+          <div className="p-4 bg-gradient-to-r from-[#6C63FF]/10 to-[#00FFC6]/10 border-b border-[#1E3A5F]">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-lg">📌</span>
+              <p className="text-sm font-semibold text-[#00FFC6]">Referenced Quote</p>
+            </div>
+            <p className="text-sm text-[#E6F1FF] bg-[#0A192F]/50 p-3 rounded-lg border border-[#1E3A5F] italic leading-relaxed">
+              "{quote}"
+            </p>
+            <div className="mt-3 flex items-center gap-3 text-xs">
+              <span className="text-[#A8B2D1]">
+                💡 Press <kbd className="px-1.5 py-0.5 bg-[#1E3A5F] rounded font-mono text-[#00FFC6]">Ctrl+F</kbd> to search
+              </span>
+              <button onClick={copyQuote} className="text-[#6C63FF] hover:text-[#00FFC6] transition-colors">
+                {copied ? '✓ Copied!' : '📋 Copy'}
+              </button>
+            </div>
           </div>
         )}
 
-        {/* PDF */}
-        <div className="flex-1 overflow-hidden bg-[#0D1F3C]">
+        <div className="flex-1 overflow-hidden bg-[#0D1F3C] relative">
+          {/* Loading overlay */}
+          {isLoading && pdfUrl && (
+            <div className="absolute inset-0 flex items-center justify-center bg-[#0D1F3C] z-10">
+              <div className="flex flex-col items-center gap-3">
+                <Loader2 className="w-8 h-8 animate-spin text-[#6C63FF]" />
+                <p className="text-[#A8B2D1] text-sm">Loading document...</p>
+              </div>
+            </div>
+          )}
+          
           {pdfUrl ? (
-            <iframe src={`${pdfUrl}#page=${pageNumber}`} className="w-full h-full border-0" title="PDF" />
+            <iframe 
+              src={`${pdfUrl}#page=${pageNumber}`} 
+              className="w-full h-full border-0" 
+              title="PDF Viewer"
+              onLoad={() => setIsLoading(false)}
+            />
           ) : (
-            <div className="flex flex-col items-center justify-center h-full text-[#8892B0] p-6">
-              <BookOpen className="w-12 h-12 mb-3 text-[#1E3A5F]" />
-              <p className="font-medium text-[#E6F1FF]">PDF Not Available</p>
-              <p className="text-xs mt-1 text-center">Source: {sourceFile}, Page {pageNumber}</p>
+            <div className="flex flex-col items-center justify-center h-full text-[#A8B2D1] p-8">
+              <BookOpen className="w-16 h-16 mb-4 text-[#1E3A5F]" />
+              <p className="text-lg font-medium text-[#E6F1FF]">PDF Not Available</p>
+              <p className="text-sm mt-2">Configure Supabase Storage to view source documents</p>
             </div>
           )}
         </div>
@@ -191,201 +269,245 @@ const PDFViewerPanel = ({ isOpen, onClose, pdfUrl, pageNumber, quote, sourceFile
 };
 
 // ============================================================================
-// CITATION LINK
+// CITATION LINK - Fixed for Q&A section (Issue #8)
 // ============================================================================
 const CitationLink = ({ sourceFile, pageNumber, quote, onOpenPDF }) => {
-  const handleClick = (e) => {
-    e.stopPropagation();
+  const handleClick = () => {
+    const pdfUrl = sourceFile ? `${CONFIG.SUPABASE_STORAGE_URL}${sourceFile}` : null;
+    console.log('Opening PDF:', { sourceFile, pageNumber, quote, pdfUrl }); // Debug log
     onOpenPDF({
       sourceFile,
       pageNumber: pageNumber || 1,
       quote,
-      pdfUrl: sourceFile ? `${CONFIG.SUPABASE_STORAGE_URL}${sourceFile}` : null
+      pdfUrl
     });
   };
 
   return (
     <button
       onClick={handleClick}
-      className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] bg-[#1E3A5F] hover:bg-[#6C63FF]/30 rounded transition-colors text-[#8892B0] hover:text-[#00FFC6]"
+      className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-[#1E3A5F] hover:bg-[#6C63FF]/30 rounded transition-colors text-[#A8B2D1] hover:text-[#00FFC6] border border-[#1E3A5F] hover:border-[#6C63FF]/50"
     >
-      <FileText className="w-2.5 h-2.5" />
-      p.{pageNumber || '?'}
+      <FileText className="w-3 h-3" />
+      <span>p.{pageNumber || '?'}</span>
     </button>
   );
 };
 
 // ============================================================================
-// COMPACT FILE UPLOAD
+// FILE UPLOAD COMPONENT - Made more compact (Issue #4)
 // ============================================================================
-const FileUploadCompact = ({ onUploadSuccess }) => {
+const FileUploadSection = ({ onUploadSuccess }) => {
+  const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [status, setStatus] = useState(null);
+  const [uploadStatus, setUploadStatus] = useState(null);
   const fileInputRef = useRef(null);
+
+  const handleDrop = async (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file && file.type === 'application/pdf') {
+      await uploadFile(file);
+    }
+  };
 
   const handleFileSelect = async (e) => {
     const file = e.target.files[0];
-    if (!file) return;
-    
+    if (file) {
+      await uploadFile(file);
+    }
+  };
+
+  const uploadFile = async (file) => {
     setIsUploading(true);
-    setStatus(null);
+    setUploadStatus(null);
 
     try {
       const formData = new FormData();
       formData.append('Upload_Here', file);
+
       const response = await fetch(CONFIG.INGESTION_FORM_URL, {
         method: 'POST',
         body: formData,
       });
 
       if (response.ok) {
-        setStatus({ type: 'success', msg: 'Uploaded! Processing...' });
-        if (onUploadSuccess) setTimeout(() => onUploadSuccess(), 5000);
+        setUploadStatus({ type: 'success', message: `${file.name} uploaded!` });
+        if (onUploadSuccess) onUploadSuccess();
       } else {
-        throw new Error('Failed');
+        throw new Error('Upload failed');
       }
     } catch (error) {
-      setStatus({ type: 'error', msg: 'Upload failed' });
+      setUploadStatus({ type: 'error', message: `Failed: ${error.message}` });
     } finally {
       setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
   return (
-    <div className="bg-[#112240] rounded-lg border border-[#1E3A5F] p-3">
-      <div className="flex items-center gap-3">
+    <div className="bg-[#112240] rounded-xl border border-[#1E3A5F] p-3">
+      <div className="flex items-center gap-2 mb-2">
+        <Upload className="w-4 h-4 text-[#6C63FF]" />
+        <h3 className="text-sm font-semibold text-[#E6F1FF]">Ingest Document</h3>
+      </div>
+      
+      <div
+        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={handleDrop}
+        onClick={() => fileInputRef.current?.click()}
+        className={`
+          border-2 border-dashed rounded-lg p-3 text-center cursor-pointer transition-all
+          ${isDragging 
+            ? 'border-[#00FFC6] bg-[#00FFC6]/10' 
+            : 'border-[#1E3A5F] hover:border-[#6C63FF] hover:bg-[#6C63FF]/5'}
+        `}
+      >
         <input
           ref={fileInputRef}
           type="file"
           accept=".pdf"
           onChange={handleFileSelect}
           className="hidden"
-          id="file-upload"
         />
-        <label
-          htmlFor="file-upload"
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer transition-colors text-sm ${
-            isUploading 
-              ? 'bg-[#1E3A5F] text-[#8892B0]' 
-              : 'bg-[#6C63FF]/20 hover:bg-[#6C63FF]/30 text-[#6C63FF]'
-          }`}
-        >
-          {isUploading ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Upload className="w-4 h-4" />
-          )}
-          <span>{isUploading ? 'Processing...' : 'Upload PDF'}</span>
-        </label>
         
-        {status && (
-          <span className={`text-xs flex items-center gap-1 ${
-            status.type === 'success' ? 'text-[#00FFC6]' : 'text-[#FF4757]'
-          }`}>
-            {status.type === 'success' ? <Check className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
-            {status.msg}
-          </span>
-        )}
-        
-        {!status && !isUploading && (
-          <span className="text-xs text-[#495670]">Transcript or Presentation</span>
+        {isUploading ? (
+          <div className="flex items-center justify-center gap-2">
+            <Loader2 className="w-5 h-5 animate-spin text-[#6C63FF]" />
+            <p className="text-xs text-[#A8B2D1]">Processing...</p>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center gap-2">
+            <Upload className={`w-5 h-5 ${isDragging ? 'text-[#00FFC6]' : 'text-[#697A9B]'}`} />
+            <p className="text-xs text-[#A8B2D1]">
+              Drop PDF or <span className="text-[#6C63FF]">browse</span>
+            </p>
+          </div>
         )}
       </div>
+
+      {uploadStatus && (
+        <div className={`mt-2 p-2 rounded text-xs flex items-center gap-2 ${
+          uploadStatus.type === 'success' 
+            ? 'bg-[#00FFC6]/10 text-[#00FFC6]' 
+            : 'bg-[#FF6B7A]/10 text-[#FF6B7A]'
+        }`}>
+          {uploadStatus.type === 'success' ? <Check className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+          <span className="truncate">{uploadStatus.message}</span>
+        </div>
+      )}
     </div>
   );
 };
 
 // ============================================================================
-// METRICS SECTION
+// METRICS CARD - With consistent header styling (Issue #2)
 // ============================================================================
-const MetricsSection = ({ data, isLoading, error, quarters, onExport, ticker }) => {
+const MetricsCard = ({ data, isLoading, error, quarters, onOpenPDF, onExport, ticker }) => {
+  // Filter metrics (Issue #3)
+  const filteredMetrics = data?.metrics ? filterMetrics(data.metrics) : [];
+  
   if (isLoading) {
     return (
-      <div className="bg-[#112240] rounded-lg border border-[#1E3A5F] p-4 h-full flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-[#6C63FF]" />
-        <span className="ml-2 text-[#8892B0] text-sm">Loading metrics...</span>
+      <div className="bg-[#112240] rounded-xl border border-[#1E3A5F] p-6 h-full">
+        <div className="flex items-center justify-center h-full">
+          <Loader2 className="w-8 h-8 animate-spin text-[#6C63FF]" />
+          <span className="ml-2 text-[#A8B2D1]">Loading metrics...</span>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-[#112240] rounded-lg border border-[#FF4757]/30 p-4 h-full flex flex-col items-center justify-center">
-        <AlertCircle className="w-8 h-8 text-[#FF4757] mb-2" />
-        <p className="text-[#FF4757] text-sm">Error: {error}</p>
+      <div className="bg-[#112240] rounded-xl border border-[#FF6B7A]/30 p-6 h-full">
+        <div className="flex flex-col items-center justify-center h-full text-[#FF6B7A]">
+          <AlertCircle className="w-10 h-10 mb-2" />
+          <p className="font-medium">Error loading metrics</p>
+          <p className="text-sm text-[#A8B2D1] mt-1">{error}</p>
+        </div>
       </div>
     );
   }
 
-  // Filter out hidden metrics
-  const filteredMetrics = data?.metrics?.filter(
-    m => !CONFIG.HIDDEN_METRICS.includes(m.metric_name)
-  ) || [];
-
-  if (filteredMetrics.length === 0) {
+  if (!data || filteredMetrics.length === 0) {
     return (
-      <div className="bg-[#112240] rounded-lg border border-[#1E3A5F] p-4 h-full flex flex-col items-center justify-center">
-        <TrendingUp className="w-8 h-8 text-[#1E3A5F] mb-2" />
-        <p className="text-[#8892B0] text-sm">No metrics data</p>
+      <div className="bg-[#112240] rounded-xl border border-[#1E3A5F] p-6 h-full">
+        <div className="flex flex-col items-center justify-center h-full text-[#A8B2D1]">
+          <TrendingUp className="w-10 h-10 mb-2 text-[#1E3A5F]" />
+          <p className="font-medium">No metrics data</p>
+          <p className="text-sm mt-1">Ingest documents to see metrics</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-[#112240] rounded-lg border border-[#1E3A5F] overflow-hidden h-full flex flex-col">
+    <div className="bg-[#112240] rounded-xl border border-[#1E3A5F] overflow-hidden h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-[#1E3A5F] bg-[#0A192F]/50">
+      <div className="flex items-center justify-between p-3 border-b border-[#1E3A5F] shrink-0">
         <div className="flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-[#6C63FF]" />
-          <h3 className="font-semibold text-[#E6F1FF] text-sm">Key Metrics</h3>
+          <TrendingUp className="w-5 h-5 text-[#6C63FF]" />
+          <h3 className="font-semibold text-[#E6F1FF]">Key Metrics</h3>
         </div>
         <button
           onClick={() => onExport(data, ticker)}
-          className="flex items-center gap-1 px-2 py-1 text-xs bg-[#1E3A5F] hover:bg-[#6C63FF]/30 rounded transition-colors text-[#8892B0] hover:text-[#00FFC6]"
+          className="flex items-center gap-1 px-3 py-1.5 text-xs bg-[#1E3A5F] hover:bg-[#6C63FF]/30 rounded-lg transition-colors text-[#A8B2D1] hover:text-[#00FFC6]"
         >
           <Download className="w-3 h-3" />
-          CSV
+          Export
         </button>
       </div>
 
       {/* Table */}
-      <div className="flex-1 overflow-auto">
-        <table className="w-full text-sm">
-          <thead className="sticky top-0">
-            <tr className="bg-[#1E3A5F]">
-              <th className="text-left py-2 px-3 font-semibold text-[#E6F1FF]">Metric</th>
-              {quarters.map((q) => (
-                <th key={q} className="text-right py-2 px-3 font-semibold text-[#E6F1FF]">{q}</th>
+      <div className="overflow-auto flex-1">
+        <table className="w-full">
+          <thead className="sticky top-0 z-10">
+            {/* Issue #2: Consistent header styling with visual distinction */}
+            <tr className="bg-gradient-to-r from-[#1E3A5F] to-[#162D50]">
+              <th className="text-left py-3 px-4 text-sm font-bold text-[#E6F1FF] sticky left-0 bg-gradient-to-r from-[#1E3A5F] to-[#1E3A5F] z-20 border-b border-[#2D4A6F]">
+                Metric
+              </th>
+              {quarters.map((quarter) => (
+                <th key={quarter} className="text-right py-3 px-4 text-sm font-bold text-[#E6F1FF] min-w-28 border-b border-[#2D4A6F]">
+                  {quarter}
+                </th>
               ))}
             </tr>
           </thead>
           <tbody>
             {filteredMetrics.map((metric, idx) => (
-              <tr key={metric.metric_name} className={`border-t border-[#1E3A5F]/30 hover:bg-[#1E3A5F]/20`}>
-                <td className="py-2 px-3">
-                  <div className="text-[#E6F1FF]">{metric.metric_name}</div>
-                  <div className="text-[10px] text-[#495670]">{metric.unit}</div>
+              <tr key={metric.metric_name} className="border-t border-[#1E3A5F]/50 hover:bg-[#1E3A5F]/20 transition-colors">
+                <td className="py-2.5 px-4 sticky left-0 bg-[#112240] z-10">
+                  <div className="font-medium text-[#E6F1FF] text-sm">{metric.metric_name}</div>
+                  {(metric.unit || metric.currency) && (
+                    <div className="text-xs text-[#697A9B]">
+                      {metric.currency && metric.currency !== '' ? `${metric.currency} ` : ''}{metric.unit}
+                    </div>
+                  )}
                 </td>
-                {quarters.map((q, qIdx) => {
-                  const val = metric[q];
-                  const prevQ = quarters[qIdx + 1];
-                  const prevVal = prevQ ? metric[prevQ] : null;
-                  const change = calculateChange(val?.value, prevVal?.value);
+                {quarters.map((quarter, qIdx) => {
+                  const quarterData = metric[quarter];
+                  const prevQuarter = quarters[qIdx + 1];
+                  const prevData = prevQuarter ? metric[prevQuarter] : null;
+                  const change = calculateChange(quarterData?.value, prevData?.value);
                   
                   return (
-                    <td key={q} className="text-right py-2 px-3">
-                      {formatValue(val?.value, metric.currency)}
-                      {change !== null && qIdx === 0 && (
-                        <div className={`text-[10px] flex items-center justify-end gap-0.5 ${
-                          parseFloat(change) > 0 ? 'text-[#00FFC6]' : parseFloat(change) < 0 ? 'text-[#FF4757]' : 'text-[#8892B0]'
-                        }`}>
-                          {parseFloat(change) > 0 ? <ArrowUpRight className="w-2.5 h-2.5" /> : 
-                           parseFloat(change) < 0 ? <ArrowDownRight className="w-2.5 h-2.5" /> : 
-                           <Minus className="w-2.5 h-2.5" />}
-                          {Math.abs(parseFloat(change))}%
-                        </div>
-                      )}
+                    <td key={quarter} className="text-right py-2.5 px-4">
+                      <div className="flex flex-col items-end gap-0.5">
+                        {formatValue(quarterData?.value, metric.currency, '')}
+                        {change !== null && qIdx === 0 && (
+                          <span className={`text-xs flex items-center gap-0.5 ${
+                            parseFloat(change) > 0 ? 'text-[#00FFC6]' : parseFloat(change) < 0 ? 'text-[#FF6B7A]' : 'text-[#A8B2D1]'
+                          }`}>
+                            {parseFloat(change) > 0 ? <ArrowUpRight className="w-3 h-3" /> : 
+                             parseFloat(change) < 0 ? <ArrowDownRight className="w-3 h-3" /> : 
+                             <Minus className="w-3 h-3" />}
+                            {Math.abs(parseFloat(change))}%
+                          </span>
+                        )}
+                      </div>
                     </td>
                   );
                 })}
@@ -399,16 +521,16 @@ const MetricsSection = ({ data, isLoading, error, quarters, onExport, ticker }) 
 };
 
 // ============================================================================
-// GUIDANCE SECTION - Fixed with quarter headers
+// GUIDANCE CARD - With quarters header (Issue #9)
 // ============================================================================
-const GuidanceSection = ({ data, isLoading, error, quarters, onOpenPDF }) => {
+const GuidanceCard = ({ data, isLoading, error, quarters, onOpenPDF }) => {
   const [expandedThemes, setExpandedThemes] = useState({});
 
   useEffect(() => {
     if (data?.themes) {
       const initial = {};
       data.themes.forEach((theme, idx) => {
-        initial[theme.theme] = idx < 2; // Expand first 2 themes
+        initial[theme.theme] = idx === 0;
       });
       setExpandedThemes(initial);
     }
@@ -418,120 +540,143 @@ const GuidanceSection = ({ data, isLoading, error, quarters, onOpenPDF }) => {
     setExpandedThemes(prev => ({ ...prev, [theme]: !prev[theme] }));
   };
 
-  const themeConfig = {
+  const themeColors = {
     EXPANSION: { icon: '🏗️', color: '#00FFC6' },
     FINANCIAL: { icon: '💰', color: '#6C63FF' },
     OPERATIONAL: { icon: '⚙️', color: '#FF9F43' },
     CAPEX: { icon: '📊', color: '#A55EEA' },
-    REGULATORY: { icon: '📋', color: '#FF4757' },
+    REGULATORY: { icon: '📋', color: '#FF6B7A' },
     DIGITAL: { icon: '💻', color: '#00E5FF' },
-    OTHER: { icon: '📌', color: '#8892B0' }
+    OTHER: { icon: '📌', color: '#A8B2D1' }
   };
 
   if (isLoading) {
     return (
-      <div className="bg-[#112240] rounded-lg border border-[#1E3A5F] p-4 h-full flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-[#6C63FF]" />
-        <span className="ml-2 text-[#8892B0] text-sm">Loading guidance...</span>
+      <div className="bg-[#112240] rounded-xl border border-[#1E3A5F] p-6 h-full">
+        <div className="flex items-center justify-center h-full">
+          <Loader2 className="w-8 h-8 animate-spin text-[#6C63FF]" />
+          <span className="ml-2 text-[#A8B2D1]">Loading guidance...</span>
+        </div>
       </div>
     );
   }
 
-  if (error || !data?.themes?.length) {
+  if (error) {
     return (
-      <div className="bg-[#112240] rounded-lg border border-[#1E3A5F] p-4 h-full flex flex-col items-center justify-center">
-        <Calendar className="w-8 h-8 text-[#1E3A5F] mb-2" />
-        <p className="text-[#8892B0] text-sm">{error || 'No guidance data'}</p>
+      <div className="bg-[#112240] rounded-xl border border-[#FF6B7A]/30 p-6 h-full">
+        <div className="flex flex-col items-center justify-center h-full text-[#FF6B7A]">
+          <AlertCircle className="w-10 h-10 mb-2" />
+          <p className="font-medium">Error loading guidance</p>
+          <p className="text-sm text-[#A8B2D1] mt-1">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data || !data.themes || data.themes.length === 0) {
+    return (
+      <div className="bg-[#112240] rounded-xl border border-[#1E3A5F] p-6 h-full">
+        <div className="flex flex-col items-center justify-center h-full text-[#A8B2D1]">
+          <Calendar className="w-10 h-10 mb-2 text-[#1E3A5F]" />
+          <p className="font-medium">No guidance data</p>
+          <p className="text-sm mt-1">Ingest transcripts to see guidance</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-[#112240] rounded-lg border border-[#1E3A5F] overflow-hidden h-full flex flex-col">
-      {/* Header with quarter columns */}
-      <div className="border-b border-[#1E3A5F] bg-[#0A192F]/50">
-        <div className="flex items-center gap-2 px-4 py-2 border-b border-[#1E3A5F]/50">
-          <Calendar className="w-4 h-4 text-[#6C63FF]" />
-          <h3 className="font-semibold text-[#E6F1FF] text-sm">Forward Guidance</h3>
-        </div>
-        {/* Quarter headers */}
-        <div className="grid grid-cols-5 text-xs">
-          <div className="px-3 py-1.5 text-[#8892B0] font-medium">Theme / Topic</div>
-          {quarters.map(q => (
-            <div key={q} className="px-2 py-1.5 text-[#E6F1FF] font-semibold text-center bg-[#1E3A5F]/50">{q}</div>
-          ))}
-        </div>
+    <div className="bg-[#112240] rounded-xl border border-[#1E3A5F] overflow-hidden h-full flex flex-col">
+      {/* Header with title */}
+      <div className="flex items-center gap-2 p-3 border-b border-[#1E3A5F] shrink-0">
+        <Calendar className="w-5 h-5 text-[#6C63FF]" />
+        <h3 className="font-semibold text-[#E6F1FF]">Forward Guidance</h3>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-auto">
+      {/* Issue #9: Quarters header row */}
+      <div className="grid grid-cols-[1fr_repeat(4,minmax(100px,1fr))] bg-gradient-to-r from-[#1E3A5F] to-[#162D50] border-b border-[#2D4A6F] shrink-0">
+        <div className="py-2 px-3 text-sm font-bold text-[#E6F1FF]">Theme</div>
+        {quarters.map((quarter) => (
+          <div key={quarter} className="py-2 px-2 text-sm font-bold text-[#E6F1FF] text-center">
+            {quarter}
+          </div>
+        ))}
+      </div>
+
+      <div className="overflow-y-auto flex-1">
         {data.themes.map((themeGroup) => {
-          const tc = themeConfig[themeGroup.theme] || themeConfig.OTHER;
+          const theme = themeColors[themeGroup.theme] || themeColors.OTHER;
           return (
-            <div key={themeGroup.theme} className="border-b border-[#1E3A5F]/30 last:border-0">
-              {/* Theme header */}
+            <div key={themeGroup.theme} className="border-b border-[#1E3A5F]/50 last:border-0">
               <button
                 onClick={() => toggleTheme(themeGroup.theme)}
-                className="w-full flex items-center justify-between px-3 py-2 hover:bg-[#1E3A5F]/20 transition-colors"
+                className="w-full flex items-center justify-between p-2.5 hover:bg-[#1E3A5F]/30 transition-colors"
               >
                 <div className="flex items-center gap-2">
-                  <span>{tc.icon}</span>
-                  <span className="font-medium text-[#E6F1FF] text-xs">{themeGroup.theme}</span>
-                  <span className="text-[10px] text-[#495670]">({themeGroup.items?.length || 0})</span>
+                  <span className="text-base">{theme.icon}</span>
+                  <span className="font-medium text-[#E6F1FF] text-sm">{themeGroup.theme}</span>
+                  <span className="text-xs text-[#697A9B] bg-[#0A192F] px-2 py-0.5 rounded-full">
+                    {themeGroup.items?.length || 0}
+                  </span>
                 </div>
-                {expandedThemes[themeGroup.theme] ? 
-                  <ChevronDown className="w-3 h-3 text-[#8892B0]" /> : 
-                  <ChevronRight className="w-3 h-3 text-[#8892B0]" />
-                }
+                {expandedThemes[themeGroup.theme] ? (
+                  <ChevronDown className="w-4 h-4 text-[#A8B2D1]" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 text-[#A8B2D1]" />
+                )}
               </button>
               
-              {/* Items */}
-              {expandedThemes[themeGroup.theme] && themeGroup.items?.map((item, idx) => (
-                <div key={idx} className="grid grid-cols-5 border-t border-[#1E3A5F]/20 text-xs">
-                  {/* Subtheme */}
-                  <div className="px-3 py-2 text-[#8892B0] bg-[#0A192F]/30">
-                    <div className="flex items-center gap-1">
-                      <div className="w-1 h-1 rounded-full" style={{ backgroundColor: tc.color }} />
-                      {item.subtheme}
-                    </div>
-                  </div>
-                  
-                  {/* Quarter cells */}
-                  {quarters.map(q => {
-                    const gList = item[q];
-                    return (
-                      <div key={q} className="px-2 py-2 border-l border-[#1E3A5F]/20">
-                        {gList && Array.isArray(gList) && gList.length > 0 ? (
-                          gList.map((g, gIdx) => (
-                            <div key={gIdx} className="mb-2 last:mb-0">
-                              <p className="text-[#E6F1FF] text-[11px] leading-relaxed mb-1">{g.guidance_text}</p>
-                              <div className="flex items-center gap-1 flex-wrap">
-                                {g.confidence_level && (
-                                  <span className={`text-[9px] px-1 py-0.5 rounded ${
-                                    getConfidenceBadge(g.confidence_level).bg
-                                  } ${getConfidenceBadge(g.confidence_level).text}`}>
-                                    {g.confidence_level}
-                                  </span>
-                                )}
-                                {(g.source_file || g.source_filename) && (
-                                  <CitationLink 
-                                    sourceFile={g.source_file || g.source_filename}
-                                    pageNumber={g.page_number || g.guidance_page_number}
-                                    quote={g.exact_quote}
-                                    onOpenPDF={onOpenPDF}
-                                  />
-                                )}
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <span className="text-[#1E3A5F]">—</span>
-                        )}
+              {expandedThemes[themeGroup.theme] && (
+                <div className="px-2.5 pb-2.5">
+                  {themeGroup.items?.map((item, idx) => (
+                    <div key={idx} className="mb-2 last:mb-0">
+                      <div className="text-xs font-medium text-[#A8B2D1] mb-1.5 flex items-center gap-1 pl-1">
+                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: theme.color }} />
+                        {item.subtheme}
                       </div>
-                    );
-                  })}
+                      {/* Issue #9: Grid layout matching header columns, removed individual quarter labels */}
+                      <div className="grid grid-cols-[1fr_repeat(4,minmax(100px,1fr))] gap-1">
+                        <div></div> {/* Empty cell to align with theme column */}
+                        {quarters.map((quarter) => {
+                          const guidanceList = item[quarter];
+                          return (
+                            <div key={quarter} className="bg-[#0A192F] rounded-lg p-2 min-h-[50px]">
+                              {guidanceList && Array.isArray(guidanceList) && guidanceList.length > 0 ? (
+                                guidanceList.map((g, gIdx) => (
+                                  <div key={gIdx} className="text-xs text-[#E6F1FF] mb-2 last:mb-0">
+                                    <p className="line-clamp-3 mb-1">{g.guidance_text}</p>
+                                    <div className="flex items-center gap-1 flex-wrap">
+                                      {g.confidence_level && (
+                                        <span className={`text-[10px] px-1.5 py-0.5 rounded border ${
+                                          getConfidenceBadge(g.confidence_level).bg
+                                        } ${getConfidenceBadge(g.confidence_level).text} ${
+                                          getConfidenceBadge(g.confidence_level).border
+                                        }`}>
+                                          {g.confidence_level}
+                                        </span>
+                                      )}
+                                      {(g.source_file || g.source_filename) && (
+                                        <CitationLink 
+                                          sourceFile={g.source_file || g.source_filename}
+                                          pageNumber={g.page_number || g.guidance_page_number}
+                                          quote={g.exact_quote}
+                                          onOpenPDF={onOpenPDF}
+                                        />
+                                      )}
+                                    </div>
+                                  </div>
+                                ))
+                              ) : (
+                                <span className="text-[#5A6A8A] text-xs">—</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           );
         })}
@@ -541,30 +686,38 @@ const GuidanceSection = ({ data, isLoading, error, quarters, onOpenPDF }) => {
 };
 
 // ============================================================================
-// CHAT SECTION - Fixed scroll behavior
+// CHAT CARD - Fixed scrolling and citations (Issues #6, #8)
 // ============================================================================
-const ChatSection = ({ ticker, onOpenPDF }) => {
-  const [messages, setMessages] = useState([]);
+const ChatCard = ({ ticker, onOpenPDF }) => {
+  const [messages, setMessages] = useState([
+    {
+      role: 'assistant',
+      content: `Ask me anything about ${ticker}'s earnings, guidance, or operational metrics.`
+    }
+  ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
 
-  useEffect(() => {
-    setMessages([{
-      role: 'assistant',
-      content: `Ask me about ${ticker}'s earnings, guidance, or metrics.`
-    }]);
-  }, [ticker]);
-
-  // Scroll only within the chat container
+  // Issue #6: Scroll only within the messages container, not the whole page
   useEffect(() => {
     if (messagesContainerRef.current) {
       messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
   }, [messages]);
 
+  useEffect(() => {
+    setMessages([{
+      role: 'assistant',
+      content: `Ask me anything about ${ticker}'s earnings, guidance, or operational metrics.`
+    }]);
+  }, [ticker]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    e.stopPropagation(); // Issue #6: Prevent event bubbling
+    
     if (!input.trim() || isLoading) return;
 
     const userMessage = input.trim();
@@ -580,23 +733,35 @@ const ChatSection = ({ ticker, onOpenPDF }) => {
       });
 
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      let data = await response.json();
+      const data = await response.json();
       
-      // Handle array response format: [{ output, citations }]
-      if (Array.isArray(data) && data.length > 0) {
-        data = data[0];
+      // Issue #8: Handle both array and direct object response formats
+      let output, citations;
+      
+      if (Array.isArray(data)) {
+        // Response is an array - take first item
+        const firstItem = data[0] || {};
+        output = firstItem.output || firstItem.response || firstItem.text || '';
+        citations = firstItem.citations || [];
+      } else {
+        // Response is a direct object
+        output = data.output || data.response || data.text || JSON.stringify(data);
+        citations = data.citations || [];
       }
       
-      // Extract response text
-      const responseText = data.output || data.response || data.text || JSON.stringify(data);
+      // Issue #8: Map citation fields correctly
+      const mappedCitations = citations.map(c => ({
+        sourceFile: c.source_file || c.source || c.sourceFile,
+        pageNumber: c.page_number || c.page || c.pageNumber,
+        quote: c.quote || c.exact_quote
+      }));
       
-      // Extract citations
-      const citations = data.citations || [];
-
+      console.log('Chat response:', { output, citations: mappedCitations }); // Debug log
+      
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: responseText,
-        citations: citations
+        content: output,
+        citations: mappedCitations
       }]);
     } catch (error) {
       setMessages(prev => [...prev, {
@@ -609,38 +774,46 @@ const ChatSection = ({ ticker, onOpenPDF }) => {
     }
   };
 
+  // Issue #6: Prevent Enter key from scrolling page
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e);
+    }
+  };
+
   return (
-    <div className="bg-[#112240] rounded-lg border border-[#1E3A5F] overflow-hidden flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center gap-2 px-4 py-2 border-b border-[#1E3A5F] bg-[#0A192F]/50">
-        <MessageSquare className="w-4 h-4 text-[#6C63FF]" />
-        <h3 className="font-semibold text-[#E6F1FF] text-sm">Ask Questions</h3>
+    <div className="bg-[#112240] rounded-xl border border-[#1E3A5F] overflow-hidden flex flex-col h-full">
+      <div className="flex items-center gap-2 p-3 border-b border-[#1E3A5F] shrink-0">
+        <MessageSquare className="w-5 h-5 text-[#6C63FF]" />
+        <h3 className="font-semibold text-[#E6F1FF]">Ask Questions</h3>
       </div>
 
-      {/* Messages - scrollable container */}
+      {/* Issue #6: Added ref to messages container for controlled scrolling */}
       <div 
         ref={messagesContainerRef}
         className="flex-1 overflow-y-auto p-3 space-y-2"
-        style={{ maxHeight: 'calc(100% - 100px)' }}
+        style={{ scrollBehavior: 'smooth' }}
       >
-        {messages.map((msg, idx) => (
-          <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[90%] rounded-lg p-2 text-xs ${
-              msg.role === 'user'
+        {messages.map((message, idx) => (
+          <div key={idx} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div className={`max-w-[85%] rounded-lg p-2.5 text-sm ${
+              message.role === 'user'
                 ? 'bg-[#6C63FF] text-white'
-                : msg.isError
-                ? 'bg-[#FF4757]/20 text-[#FF4757]'
+                : message.isError
+                ? 'bg-[#FF6B7A]/20 border border-[#FF6B7A]/30 text-[#FF6B7A]'
                 : 'bg-[#0A192F] border border-[#1E3A5F] text-[#E6F1FF]'
             }`}>
-              <p className="whitespace-pre-wrap">{msg.content}</p>
-              {msg.citations?.length > 0 && (
+              <p className="whitespace-pre-wrap">{message.content}</p>
+              {/* Issue #8: Fixed citation rendering with correct field names */}
+              {message.citations?.length > 0 && (
                 <div className="mt-2 pt-2 border-t border-[#1E3A5F] flex flex-wrap gap-1">
-                  {msg.citations.map((c, i) => (
+                  {message.citations.map((c, i) => (
                     <CitationLink 
                       key={i} 
-                      sourceFile={c.source || c.source_file || c.source_filename} 
-                      pageNumber={c.page || c.page_number} 
-                      quote={c.quote || c.text || c.exact_quote} 
+                      sourceFile={c.sourceFile} 
+                      pageNumber={c.pageNumber} 
+                      quote={c.quote} 
                       onOpenPDF={onOpenPDF} 
                     />
                   ))}
@@ -651,22 +824,24 @@ const ChatSection = ({ ticker, onOpenPDF }) => {
         ))}
         {isLoading && (
           <div className="flex justify-start">
-            <div className="bg-[#0A192F] border border-[#1E3A5F] rounded-lg p-2">
+            <div className="bg-[#0A192F] border border-[#1E3A5F] rounded-lg p-2.5">
               <Loader2 className="w-4 h-4 animate-spin text-[#6C63FF]" />
             </div>
           </div>
         )}
+        <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <form onSubmit={handleSubmit} className="p-2 border-t border-[#1E3A5F]">
+      {/* Issue #6: Form with prevented default behavior */}
+      <form onSubmit={handleSubmit} className="p-2.5 border-t border-[#1E3A5F] shrink-0">
         <div className="flex gap-2">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder="Ask about earnings, guidance..."
-            className="flex-1 px-3 py-2 bg-[#0A192F] border border-[#1E3A5F] rounded-lg text-xs text-[#E6F1FF] placeholder-[#495670] focus:outline-none focus:border-[#6C63FF]"
+            className="flex-1 px-3 py-2 bg-[#0A192F] border border-[#1E3A5F] rounded-lg text-sm text-[#E6F1FF] placeholder-[#697A9B] focus:outline-none focus:border-[#6C63FF]"
             disabled={isLoading}
           />
           <button
@@ -683,7 +858,7 @@ const ChatSection = ({ ticker, onOpenPDF }) => {
 };
 
 // ============================================================================
-// MAIN DASHBOARD
+// MAIN DASHBOARD - Expanded width (Issue #1) & Company headline (Issue #5)
 // ============================================================================
 export default function App() {
   const [selectedSector, setSelectedSector] = useState('Healthcare');
@@ -705,44 +880,46 @@ export default function App() {
   const availableTickers = CONFIG.SECTORS[selectedSector] || [];
 
   const fetchData = async (ticker) => {
-    if (!ticker) return;
-    
     setIsLoadingMetrics(true);
     setIsLoadingGuidance(true);
     setMetricsError(null);
     setGuidanceError(null);
 
     try {
-      const res = await fetch(CONFIG.METRICS_ENDPOINT, {
+      const response = await fetch(CONFIG.METRICS_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ticker })
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setMetricsData(await res.json());
-    } catch (e) {
-      setMetricsError(e.message);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      setMetricsData(await response.json());
+    } catch (error) {
+      setMetricsError(error.message);
+      setMetricsData(null);
     } finally {
       setIsLoadingMetrics(false);
     }
 
     try {
-      const res = await fetch(CONFIG.GUIDANCE_ENDPOINT, {
+      const response = await fetch(CONFIG.GUIDANCE_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ticker })
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setGuidanceData(await res.json());
-    } catch (e) {
-      setGuidanceError(e.message);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      setGuidanceData(await response.json());
+    } catch (error) {
+      setGuidanceError(error.message);
+      setGuidanceData(null);
     } finally {
       setIsLoadingGuidance(false);
     }
   };
 
   useEffect(() => {
-    fetchData(selectedTicker);
+    if (selectedTicker) {
+      fetchData(selectedTicker);
+    }
   }, [selectedTicker]);
 
   useEffect(() => {
@@ -752,55 +929,79 @@ export default function App() {
     }
   }, [selectedSector]);
 
-  const quarters = metricsData?.quarters || guidanceData?.quarters || CONFIG.DISPLAY_QUARTERS;
+  const displayQuarters = metricsData?.quarters || guidanceData?.quarters || CONFIG.DISPLAY_QUARTERS;
+  
+  // Issue #5: Get company display name
+  const companyName = CONFIG.COMPANY_NAMES[selectedTicker] || selectedTicker;
 
   return (
+    // Issue #1: Full height layout to prevent external scrolling
     <div className="h-screen flex flex-col overflow-hidden" style={{ backgroundColor: THEME.bg.primary }}>
-      {/* PDF Viewer */}
       <PDFViewerPanel {...pdfViewer} onClose={closePDF} />
 
       {/* Header - Compact */}
-      <header className="border-b border-[#1E3A5F] flex-shrink-0" style={{ backgroundColor: THEME.bg.secondary }}>
-        <div className="px-4 py-2">
-          <div className="flex items-center justify-between">
+      <header className="border-b border-[#1E3A5F] shrink-0" style={{ backgroundColor: THEME.bg.secondary }}>
+        {/* Issue #1: Reduced padding, expanded width */}
+        <div className="w-full px-3 py-2">
+          <div className="flex items-center justify-between flex-wrap gap-3">
             {/* Logo */}
             <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-gradient-to-br from-[#6C63FF] to-[#00FFC6]">
+              <div className="p-1.5 rounded-lg" style={{ 
+                background: `linear-gradient(135deg, ${THEME.accent.primary}, ${THEME.accent.secondary})`,
+                boxShadow: THEME.glow.primary
+              }}>
                 <Brain className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-sm font-bold text-[#E6F1FF]">Financial Analysis Agent</h1>
-                <p className="text-[10px] text-[#8892B0]">Autonomous Earnings Intelligence</p>
+                <h1 className="text-base font-bold" style={{ color: THEME.text.primary }}>
+                  Financial Analysis Agent
+                </h1>
               </div>
             </div>
 
             {/* Controls */}
-            <div className="flex items-center gap-4">
-              {/* Sector */}
-              <div className="flex items-center gap-2">
-                <label className="text-[10px] text-[#495670] uppercase tracking-wider">Sector</label>
+            <div className="flex items-center gap-3">
+              {/* Sector Select */}
+              <div className="flex flex-col">
+                <label className="text-[10px] uppercase tracking-wider mb-0.5" style={{ color: THEME.text.tertiary }}>
+                  Sector
+                </label>
                 <select
                   value={selectedSector}
                   onChange={(e) => setSelectedSector(e.target.value)}
-                  className="px-2 py-1 rounded text-xs font-medium bg-[#0D1F3C] border border-[#1E3A5F] text-[#E6F1FF] focus:outline-none focus:border-[#6C63FF]"
+                  className="px-2 py-1 rounded-lg text-sm font-medium border focus:outline-none focus:ring-2"
+                  style={{ 
+                    backgroundColor: THEME.bg.input,
+                    borderColor: THEME.border,
+                    color: THEME.text.primary,
+                  }}
                 >
-                  {Object.keys(CONFIG.SECTORS).map(s => (
-                    <option key={s} value={s}>{s}</option>
+                  {Object.keys(CONFIG.SECTORS).map(sector => (
+                    <option key={sector} value={sector}>{sector}</option>
                   ))}
                 </select>
               </div>
 
-              {/* Ticker */}
-              <div className="flex items-center gap-2">
-                <label className="text-[10px] text-[#495670] uppercase tracking-wider">Company</label>
+              {/* Ticker Select */}
+              <div className="flex flex-col">
+                <label className="text-[10px] uppercase tracking-wider mb-0.5" style={{ color: THEME.text.tertiary }}>
+                  Company
+                </label>
                 <select
                   value={selectedTicker}
                   onChange={(e) => setSelectedTicker(e.target.value)}
                   disabled={availableTickers.length === 0}
-                  className="px-2 py-1 rounded text-xs font-medium bg-[#0D1F3C] border border-[#1E3A5F] text-[#00FFC6] focus:outline-none focus:border-[#6C63FF] disabled:opacity-50"
+                  className="px-2 py-1 rounded-lg text-sm font-medium border focus:outline-none focus:ring-2 disabled:opacity-50"
+                  style={{ 
+                    backgroundColor: THEME.bg.input,
+                    borderColor: THEME.border,
+                    color: THEME.accent.highlight,
+                  }}
                 >
                   {availableTickers.length > 0 ? (
-                    availableTickers.map(t => <option key={t} value={t}>{t}</option>)
+                    availableTickers.map(ticker => (
+                      <option key={ticker} value={ticker}>{ticker}</option>
+                    ))
                   ) : (
                     <option value="">No companies</option>
                   )}
@@ -811,7 +1012,8 @@ export default function App() {
               <button
                 onClick={() => fetchData(selectedTicker)}
                 disabled={isLoadingMetrics || isLoadingGuidance}
-                className="p-1.5 rounded hover:bg-[#1E3A5F] transition-colors text-[#8892B0] disabled:opacity-50"
+                className="p-1.5 rounded-lg transition-colors hover:bg-[#1E3A5F] disabled:opacity-50 self-end"
+                style={{ color: THEME.text.secondary }}
               >
                 <RefreshCw className={`w-4 h-4 ${(isLoadingMetrics || isLoadingGuidance) ? 'animate-spin' : ''}`} />
               </button>
@@ -820,47 +1022,64 @@ export default function App() {
         </div>
       </header>
 
-      {/* Company Name Banner + Upload */}
-      <div className="px-4 py-2 border-b border-[#1E3A5F]/50 flex items-center justify-between flex-shrink-0" style={{ backgroundColor: THEME.bg.primary }}>
-        <h2 className="text-xl font-bold text-[#E6F1FF]">
-          {selectedTicker}
-          <span className="text-sm font-normal text-[#8892B0] ml-2">Quarterly Analysis</span>
-        </h2>
-        <FileUploadCompact onUploadSuccess={() => fetchData(selectedTicker)} />
+      {/* Issue #5: Company Name Headline */}
+      <div className="px-3 py-2 border-b border-[#1E3A5F]/50 shrink-0" style={{ backgroundColor: THEME.bg.primary }}>
+        <div className="flex items-center gap-2">
+          <Building2 className="w-5 h-5 text-[#6C63FF]" />
+          <h2 className="text-lg font-bold text-[#E6F1FF]">{companyName}</h2>
+          <span className="text-sm text-[#A8B2D1] bg-[#1E3A5F] px-2 py-0.5 rounded-full">{selectedTicker}</span>
+        </div>
       </div>
 
-      {/* Main Content - Full width, split layout */}
-      <main className="flex-1 overflow-hidden px-4 py-3">
-        <div className="h-full grid grid-cols-12 gap-4">
-          {/* Left: Metrics + Guidance (stacked 50/50) */}
-          <div className="col-span-8 flex flex-col gap-3 h-full">
+      {/* Main Content - Issue #1: Expanded width with minimal margins, Issue #3: Half-half height */}
+      <main className="flex-1 overflow-hidden px-3 py-3">
+        {/* Issue #1: Changed to w-full and reduced gap */}
+        <div className="h-full grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-3">
+          
+          {/* Left Column - Metrics + Guidance - Issue #3: Equal height split */}
+          <div className="flex flex-col gap-3 min-h-0">
+            {/* Issue #3: Each section takes ~50% of available height */}
             <div className="flex-1 min-h-0">
-              <MetricsSection
+              <MetricsCard
                 data={metricsData}
                 isLoading={isLoadingMetrics}
                 error={metricsError}
-                quarters={quarters}
+                quarters={displayQuarters}
+                onOpenPDF={openPDF}
                 onExport={exportToCSV}
                 ticker={selectedTicker}
               />
             </div>
+            
             <div className="flex-1 min-h-0">
-              <GuidanceSection
+              <GuidanceCard
                 data={guidanceData}
                 isLoading={isLoadingGuidance}
                 error={guidanceError}
-                quarters={quarters}
+                quarters={displayQuarters}
                 onOpenPDF={openPDF}
               />
             </div>
           </div>
 
-          {/* Right: Chat */}
-          <div className="col-span-4 h-full">
-            <ChatSection ticker={selectedTicker} onOpenPDF={openPDF} />
+          {/* Right Column - Upload (compact) + Chat (expanded) - Issue #4 */}
+          <div className="flex flex-col gap-3 min-h-0">
+            {/* Issue #4: Compact upload section - shrink-0 keeps it small */}
+            <div className="shrink-0">
+              <FileUploadSection onUploadSuccess={() => setTimeout(() => fetchData(selectedTicker), 5000)} />
+            </div>
+            {/* Chat takes remaining space */}
+            <div className="flex-1 min-h-0">
+              <ChatCard ticker={selectedTicker} onOpenPDF={openPDF} />
+            </div>
           </div>
         </div>
       </main>
+
+      {/* Footer - Compact */}
+      <div className="py-1.5 text-center text-xs shrink-0 border-t border-[#1E3A5F]/30" style={{ color: THEME.text.muted }}>
+        <p>Powered by AI • Data extracted from earnings calls & investor presentations</p>
+      </div>
     </div>
   );
 }
