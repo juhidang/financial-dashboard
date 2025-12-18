@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { 
   Send, FileText, TrendingUp, MessageSquare, ChevronDown, ChevronRight, 
-  Loader2, Building2, Calendar, RefreshCw, X, AlertCircle,
-  BookOpen, Upload, Download, Brain, ArrowUpRight, ArrowDownRight, Minus,
-  LayoutDashboard
+  ExternalLink, Loader2, Building2, Calendar, RefreshCw, X, AlertCircle,
+  BookOpen, Upload, Download, Zap, Database, Brain, Activity,
+  Plus, Check, ArrowUpRight, ArrowDownRight, Minus, ArrowRight
 } from 'lucide-react';
 
 // ============================================================================
@@ -16,35 +15,92 @@ const CONFIG = {
   CHAT_ENDPOINT: 'https://juhi.app.n8n.cloud/webhook/chat',
   INGESTION_FORM_URL: 'https://juhi.app.n8n.cloud/form/cc79e7b5-c57c-41eb-85a4-98ed363ea3bd',
   SUPABASE_STORAGE_URL: 'https://xogwcwqqqtavklturbrt.supabase.co/storage/v1/object/public/earnings-documents/',
+  
   SECTORS: {
     'Healthcare': ['MAXHEALTH', 'APOLLOHOSP', 'FORTIS', 'ASTERDM', 'HCG', 'NH', 'JLHL', 'KIMS', 'RAINBOW'],
-    'Financial Services': [], 'Telecom': [], 'Industrials': [], 'Auto': [], 'IT Services': [], 'QSR': [],
+    'Financial Services': [],
+    'Telecom': [],
+    'Industrials': [],
+    'Auto': [],
+    'IT Services': [],
+    'QSR': [],
   },
-  // Ensure strict order: Q3, Q4, Q1, Q2 (Oldest to Newest or vice versa - typically Newest Left is best for finance, but user asked for specific order)
-  // User request: Last col FY26-Q2 ... First col FY25-Q3.
-  // So Left-to-Right: FY25-Q3, FY25-Q4, FY26-Q1, FY26-Q2
-  DISPLAY_QUARTERS: ['FY25-Q3', 'FY25-Q4', 'FY26-Q1', 'FY26-Q2'], 
+  
+  COMPANY_NAMES: {
+    'MAXHEALTH': 'Max Healthcare Institute Ltd',
+    'APOLLOHOSP': 'Apollo Hospitals Enterprise Ltd',
+    'FORTIS': 'Fortis Healthcare Ltd',
+    'ASTERDM': 'Aster DM Healthcare Ltd',
+    'HCG': 'Healthcare Global Enterprises Ltd',
+    'NH': 'Narayana Hrudayalaya Ltd',
+    'JLHL': 'Jupiter Life Line Hospitals Ltd',
+    'KIMS': 'Krishna Institute of Medical Sciences Ltd',
+    'RAINBOW': 'Rainbow Children\'s Medicare Ltd',
+  },
+  
+  DISPLAY_QUARTERS: ['FY25-Q3', 'FY25-Q4', 'FY26-Q1', 'FY26-Q2'], // Oldest to newest
 };
 
 // ============================================================================
-// UTILITIES & EXPORTS
+// THEME COLORS - Professional Gunmetal
 // ============================================================================
+const THEME = {
+  bg: {
+    primary: '#1e2125',      // Dark Gunmetal - main background
+    secondary: '#2a3038',    // Lighter Grey - cards
+    tertiary: '#343b45',     // Hover states
+    input: '#222b35',        // Input backgrounds
+  },
+  text: {
+    primary: '#ffffff',      // Clean white - headers
+    secondary: '#aab2bd',    // Light Grey - secondary text
+    tertiary: '#8891a0',     // Dimmer text
+    muted: '#6b7280',        // Very muted
+  },
+  accent: {
+    primary: '#00d2b4',      // Teal/Mint - primary
+    secondary: '#44d9e6',    // Sky Blue - secondary
+    highlight: '#00ffc6',    // Highlights
+  },
+  semantic: {
+    positive: '#00d2b4',
+    negative: '#ef4444',
+    warning: '#f59e0b',
+    info: '#44d9e6',
+  },
+  border: '#3a424d',
+  shadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
+};
+
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
 const getConfidenceBadge = (level) => {
-  const base = "border px-1.5 py-0.5 rounded text-[10px] font-medium tracking-wide inline-block mr-1";
-  switch (level?.toUpperCase()) {
-    case 'COMMITTED': return `${base} border-emerald-800 bg-emerald-900/30 text-emerald-400`;
-    case 'EXPECTED':  return `${base} border-blue-800 bg-blue-900/30 text-blue-400`;
-    case 'PLANNED':   return `${base} border-amber-800 bg-amber-900/30 text-amber-400`;
-    default:          return `${base} border-slate-700 bg-slate-800 text-slate-400`;
-  }
+  const styles = {
+    COMMITTED: { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30' },
+    EXPECTED: { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/30' },
+    PLANNED: { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/30' },
+    ON_TRACK: { bg: 'bg-cyan-500/20', text: 'text-cyan-400', border: 'border-cyan-500/30' },
+    ACHIEVED: { bg: 'bg-violet-500/20', text: 'text-violet-400', border: 'border-violet-500/30' },
+    DEFAULT: { bg: 'bg-slate-500/20', text: 'text-slate-400', border: 'border-slate-500/30' }
+  };
+  return styles[level?.toUpperCase()] || styles.DEFAULT;
 };
 
 const formatValue = (value, currency, unit) => {
-  if (value === null || value === undefined || value === '') return <span className="text-gray-600">—</span>;
+  if (value === null || value === undefined || value === '') {
+    return <span style={{ color: THEME.text.muted }}>—</span>;
+  }
   const numValue = typeof value === 'string' ? parseFloat(value.replace(/,/g, '')) : value;
   const prefix = currency === 'INR' ? '₹' : '';
   const suffix = unit ? ` ${unit}` : '';
-  return <span className="font-medium text-white">{prefix}{numValue.toLocaleString('en-IN')}{suffix}</span>;
+  const formattedValue = numValue.toLocaleString('en-IN');
+  return (
+    <span className="font-medium" style={{ color: THEME.text.primary }}>
+      {prefix}{formattedValue}{suffix}
+    </span>
+  );
 };
 
 const calculateChange = (current, previous) => {
@@ -55,461 +111,1038 @@ const calculateChange = (current, previous) => {
   return ((curr - prev) / prev * 100).toFixed(1);
 };
 
-// EXPORT FUNCTIONS
-const exportMetricsToCSV = (data, quarters) => {
-  if (!data || !data.metrics) return;
-  const headers = ['Metric', 'Unit', ...quarters];
-  const rows = data.metrics.map(m => {
-    return [
-      `"${m.metric_name}"`,
-      m.unit || '',
-      ...quarters.map(q => m[q]?.value || '')
-    ].join(',');
+// Export Metrics to CSV
+const exportMetricsToCSV = (data, ticker) => {
+  if (!data || !data.metrics || data.metrics.length === 0) return;
+  
+  const quarters = data.quarters || CONFIG.DISPLAY_QUARTERS;
+  const headers = ['Metric', 'Unit', 'Currency', ...quarters];
+  
+  const rows = data.metrics.map(metric => {
+    const row = [
+      metric.metric_name,
+      metric.unit || '',
+      metric.currency || '',
+      ...quarters.map(q => metric[q]?.value || '')
+    ];
+    return row.join(',');
   });
-  const csvContent = [headers.join(','), ...rows].join('\n');
-  downloadCSV(csvContent, 'key_metrics.csv');
+  
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${ticker}_metrics.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 };
 
-const exportGuidanceToCSV = (data, quarters) => {
-  if (!data || !data.themes) return;
-  const headers = ['Theme', 'Subtheme', 'Quarter', 'Guidance', 'Confidence'];
+// Export Guidance to CSV (flattened)
+const exportGuidanceToCSV = (data, ticker) => {
+  if (!data || !data.themes || data.themes.length === 0) return;
+  
+  const quarters = data.quarters || CONFIG.DISPLAY_QUARTERS;
+  const headers = ['Theme', 'Subtheme', ...quarters.map(q => `${q}_Guidance`), ...quarters.map(q => `${q}_Confidence`)];
+  
   const rows = [];
-  data.themes.forEach(theme => {
-    theme.items.forEach(item => {
+  data.themes.forEach(themeGroup => {
+    themeGroup.items?.forEach(item => {
+      const row = [
+        themeGroup.theme,
+        item.subtheme,
+      ];
+      
+      // Add guidance text for each quarter
       quarters.forEach(q => {
-        if (item[q] && item[q].length > 0) {
-          item[q].forEach(point => {
-            rows.push([
-              `"${theme.theme}"`,
-              `"${item.subtheme}"`,
-              q,
-              `"${point.guidance_text.replace(/"/g, '""')}"`, // Escape quotes
-              point.confidence_level || ''
-            ].join(','));
-          });
-        }
+        const guidanceList = item[q];
+        const guidanceText = guidanceList && Array.isArray(guidanceList) && guidanceList.length > 0
+          ? guidanceList.map(g => g.guidance_text).join(' | ')
+          : '';
+        row.push(`"${guidanceText}"`);
       });
+      
+      // Add confidence levels for each quarter
+      quarters.forEach(q => {
+        const guidanceList = item[q];
+        const confidence = guidanceList && Array.isArray(guidanceList) && guidanceList.length > 0
+          ? guidanceList.map(g => g.confidence_level || '').join(' | ')
+          : '';
+        row.push(confidence);
+      });
+      
+      rows.push(row.join(','));
     });
   });
-  const csvContent = [headers.join(','), ...rows].join('\n');
-  downloadCSV(csvContent, 'forward_guidance.csv');
-};
-
-const downloadCSV = (content, filename) => {
-  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+  
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.setAttribute('download', filename);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${ticker}_guidance.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 };
 
 // ============================================================================
-// COMPONENTS
+// PDF VIEWER PANEL
 // ============================================================================
-
-// 1. RESIZE HANDLE
-const ResizeHandle = ({ className = "" }) => (
-  <PanelResizeHandle className={`w-1.5 bg-[#222B35] hover:bg-[#00D2B4] transition-colors flex items-center justify-center group z-20 ${className}`}>
-     <div className="h-8 w-0.5 bg-[#3A404A] group-hover:bg-[#1E2125] rounded" />
-  </PanelResizeHandle>
-);
-
-const HorizontalResizeHandle = () => (
-  <PanelResizeHandle className="h-1.5 w-full bg-[#222B35] hover:bg-[#00D2B4] transition-colors flex items-center justify-center group z-20 cursor-row-resize">
-    <div className="w-8 h-0.5 bg-[#3A404A] group-hover:bg-[#1E2125] rounded" />
-  </PanelResizeHandle>
-);
-
-// 2. PDF VIEWER
 const PDFViewerPanel = ({ isOpen, onClose, pdfUrl, pageNumber, quote, sourceFile }) => {
+  const [copied, setCopied] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  useEffect(() => { if (isOpen) setIsLoading(true); }, [isOpen, pdfUrl]);
+  
+  useEffect(() => {
+    if (isOpen) {
+      setIsLoading(true);
+    }
+  }, [isOpen, pdfUrl]);
+
+  const copyQuote = () => {
+    if (quote) {
+      navigator.clipboard.writeText(quote);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   return (
-    <div 
-      className={`fixed right-0 top-[57px] bottom-0 bg-[#2C343C] shadow-2xl z-50 flex flex-col border-l border-[#3A404A] transform transition-transform duration-300 ease-in-out`}
-      style={{ width: '35%', transform: isOpen ? 'translateX(0)' : 'translateX(100%)' }}
-    >
-      <div className="flex items-center justify-between p-3 border-b border-[#3A404A] bg-[#222B35]">
-        <div className="flex items-center gap-2 overflow-hidden">
-          <FileText className="w-4 h-4 text-[#00D2B4]" />
-          <div className="flex flex-col">
-            <span className="text-sm font-medium text-white truncate max-w-[200px]">{sourceFile || 'Document'}</span>
-            <span className="text-xs text-[#AAB2BD]">Page {pageNumber}</span>
+    <>
+      <div 
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-300 ${
+          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={onClose} 
+      />
+      
+      <div 
+        className={`fixed right-0 top-0 h-full w-full md:w-2/3 lg:w-1/2 z-50 flex flex-col border-l transform transition-transform duration-300 ease-out ${
+          isOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
+        style={{ 
+          backgroundColor: THEME.bg.primary,
+          borderColor: THEME.border,
+          boxShadow: '-4px 0 20px rgba(0, 0, 0, 0.5)'
+        }}
+      >
+        <div className="flex items-center justify-between p-4 border-b" style={{ 
+          backgroundColor: THEME.bg.secondary,
+          borderColor: THEME.border 
+        }}>
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg" style={{ backgroundColor: THEME.accent.primary }}>
+              <FileText className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h3 className="font-semibold" style={{ color: THEME.text.primary }}>
+                {sourceFile || 'Document'}
+              </h3>
+              <p className="text-sm" style={{ color: THEME.text.secondary }}>Page {pageNumber}</p>
+            </div>
           </div>
+          <button 
+            onClick={onClose} 
+            className="p-2 rounded-lg transition-colors hover:bg-opacity-20"
+            style={{ color: THEME.text.secondary }}
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
-        <button onClick={onClose} className="p-1 hover:bg-[#353D46] rounded transition-colors">
-          <X className="w-5 h-5 text-[#AAB2BD]" />
-        </button>
-      </div>
-      {quote && (
-        <div className="p-3 bg-[#1E2125] border-b border-[#3A404A]">
-          <p className="text-xs text-[#AAB2BD] border-l-2 border-[#00D2B4] pl-2 italic line-clamp-3">"{quote}"</p>
-        </div>
-      )}
-      <div className="flex-1 relative bg-[#181A1E]">
-        {isLoading && pdfUrl && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[#181A1E] z-10">
-            <Loader2 className="w-6 h-6 animate-spin text-[#00D2B4]" />
+
+        {quote && (
+          <div className="p-4 border-b" style={{ 
+            background: `linear-gradient(to right, ${THEME.accent.primary}20, ${THEME.accent.secondary}20)`,
+            borderColor: THEME.border 
+          }}>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-lg">📌</span>
+              <p className="text-sm font-semibold" style={{ color: THEME.accent.primary }}>
+                Referenced Quote
+              </p>
+            </div>
+            <p className="text-sm p-3 rounded-lg border italic leading-relaxed" style={{ 
+              color: THEME.text.primary,
+              backgroundColor: `${THEME.bg.primary}80`,
+              borderColor: THEME.border 
+            }}>
+              "{quote}"
+            </p>
+            <div className="mt-3 flex items-center gap-3 text-xs">
+              <span style={{ color: THEME.text.secondary }}>
+                💡 Press <kbd className="px-1.5 py-0.5 rounded font-mono" style={{ 
+                  backgroundColor: THEME.bg.tertiary,
+                  color: THEME.accent.primary 
+                }}>Ctrl+F</kbd> to search
+              </span>
+              <button 
+                onClick={copyQuote} 
+                className="transition-colors"
+                style={{ color: copied ? THEME.accent.primary : THEME.text.secondary }}
+              >
+                {copied ? '✓ Copied!' : '📋 Copy'}
+              </button>
+            </div>
           </div>
         )}
-        {pdfUrl ? (
-          <iframe 
-            src={`${pdfUrl}#page=${pageNumber}`} 
-            className="w-full h-full border-0" 
-            title="PDF Viewer"
-            onLoad={() => setIsLoading(false)}
-          />
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full text-[#656D78]">
-            <BookOpen className="w-10 h-10 mb-2 opacity-50" />
-            <p className="text-sm">No PDF Selected</p>
-          </div>
-        )}
+
+        <div className="flex-1 overflow-hidden relative" style={{ backgroundColor: THEME.bg.input }}>
+          {isLoading && pdfUrl && (
+            <div className="absolute inset-0 flex items-center justify-center z-10" style={{ backgroundColor: THEME.bg.input }}>
+              <div className="flex flex-col items-center gap-3">
+                <Loader2 className="w-8 h-8 animate-spin" style={{ color: THEME.accent.primary }} />
+                <p className="text-sm" style={{ color: THEME.text.secondary }}>Loading document...</p>
+              </div>
+            </div>
+          )}
+          
+          {pdfUrl ? (
+            <iframe 
+              src={`${pdfUrl}#page=${pageNumber}`} 
+              className="w-full h-full border-0" 
+              title="PDF Viewer"
+              onLoad={() => setIsLoading(false)}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full p-8" style={{ color: THEME.text.secondary }}>
+              <BookOpen className="w-16 h-16 mb-4" style={{ color: THEME.border }} />
+              <p className="text-lg font-medium" style={{ color: THEME.text.primary }}>PDF Not Available</p>
+              <p className="text-sm mt-2">Configure Supabase Storage to view source documents</p>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
-// 3. FILE UPLOAD
-const FileUploadSection = ({ onUploadSuccess, onSkip, variant = 'hero' }) => {
+// ============================================================================
+// CITATION LINK
+// ============================================================================
+const CitationLink = ({ sourceFile, pageNumber, quote, onOpenPDF }) => {
+  const handleClick = () => {
+    const pdfUrl = sourceFile ? `${CONFIG.SUPABASE_STORAGE_URL}${sourceFile}` : null;
+    onOpenPDF({
+      sourceFile,
+      pageNumber: pageNumber || 1,
+      quote,
+      pdfUrl
+    });
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors border"
+      style={{
+        backgroundColor: THEME.bg.tertiary,
+        color: THEME.text.secondary,
+        borderColor: THEME.border
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.backgroundColor = THEME.accent.primary + '30';
+        e.currentTarget.style.color = THEME.accent.primary;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.backgroundColor = THEME.bg.tertiary;
+        e.currentTarget.style.color = THEME.text.secondary;
+      }}
+    >
+      <FileText className="w-3 h-3" />
+      <span>p.{pageNumber || '?'}</span>
+    </button>
+  );
+};
+
+// ============================================================================
+// FILE UPLOAD COMPONENT
+// ============================================================================
+const FileUploadSection = ({ onUploadSuccess }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState(null);
   const fileInputRef = useRef(null);
 
-  const handleUpload = async (file) => {
-    if (!file || file.type !== 'application/pdf') return;
+  const handleDrop = async (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file && file.type === 'application/pdf') {
+      await uploadFile(file);
+    }
+  };
+
+  const handleFileSelect = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      await uploadFile(file);
+    }
+  };
+
+  const uploadFile = async (file) => {
     setIsUploading(true);
     setUploadStatus(null);
+
     try {
       const formData = new FormData();
       formData.append('Upload_Here', file);
-      const response = await fetch(CONFIG.INGESTION_FORM_URL, { method: 'POST', body: formData });
+
+      const response = await fetch(CONFIG.INGESTION_FORM_URL, {
+        method: 'POST',
+        body: formData,
+      });
+
       if (response.ok) {
-        setUploadStatus({ type: 'success', message: 'Uploaded' });
+        setUploadStatus({ type: 'success', message: `${file.name} uploaded!` });
         if (onUploadSuccess) onUploadSuccess();
-      } else throw new Error('Failed');
+      } else {
+        throw new Error('Upload failed');
+      }
     } catch (error) {
-      setUploadStatus({ type: 'error', message: 'Error' });
+      setUploadStatus({ type: 'error', message: `Failed: ${error.message}` });
     } finally {
       setIsUploading(false);
     }
   };
 
-  const containerClass = variant === 'hero' 
-    ? "bg-[#2C343C] p-8 rounded-2xl border border-[#3A404A] shadow-xl w-full max-w-lg text-center"
-    : "bg-[#2C343C] p-3 rounded-lg border border-[#3A404A]";
-
   return (
-    <div className={containerClass}>
-      {variant === 'hero' && (
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold text-white mb-2">Upload Quarterly Earnings Transcripts</h2>
-          <p className="text-[#AAB2BD] text-sm">Upload a PDF to begin the automated analysis pipeline.</p>
-        </div>
-      )}
-
+    <div className="rounded-xl border p-6" style={{ 
+      backgroundColor: THEME.bg.secondary,
+      borderColor: THEME.border 
+    }}>
+      <div className="flex items-center gap-3 mb-4">
+        <Upload className="w-6 h-6" style={{ color: THEME.accent.primary }} />
+        <h3 className="text-lg font-semibold" style={{ color: THEME.text.primary }}>
+          Upload Documents
+        </h3>
+      </div>
+      
       <div
         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
         onDragLeave={() => setIsDragging(false)}
-        onDrop={(e) => { e.preventDefault(); setIsDragging(false); handleUpload(e.dataTransfer.files[0]); }}
+        onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`
-          border-2 border-dashed rounded-lg transition-all cursor-pointer flex flex-col items-center justify-center
-          ${variant === 'hero' ? 'p-10' : 'p-4'}
-          ${isDragging ? 'border-[#00D2B4] bg-[#00D2B4]/5' : 'border-[#3A404A] hover:border-[#656D78] hover:bg-[#353D46]'}
-        `}
+        className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all"
+        style={{
+          borderColor: isDragging ? THEME.accent.primary : THEME.border,
+          backgroundColor: isDragging ? `${THEME.accent.primary}10` : 'transparent'
+        }}
       >
-        <input ref={fileInputRef} type="file" accept=".pdf" onChange={(e) => handleUpload(e.target.files[0])} className="hidden" />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".pdf"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+        
         {isUploading ? (
-          <Loader2 className={`animate-spin text-[#00D2B4] ${variant === 'hero' ? 'w-10 h-10' : 'w-5 h-5'}`} />
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="w-12 h-12 animate-spin" style={{ color: THEME.accent.primary }} />
+            <p className="text-sm" style={{ color: THEME.text.secondary }}>Processing...</p>
+          </div>
         ) : (
-          <>
-            <Upload className={`text-[#AAB2BD] ${variant === 'hero' ? 'w-12 h-12 mb-3' : 'w-5 h-5 mb-1'}`} />
-            <p className="text-[#AAB2BD] text-sm font-medium">
-              {variant === 'hero' ? 'Drag & drop or browse' : 'Upload PDF'}
+          <div className="flex flex-col items-center gap-3">
+            <Upload className={`w-12 h-12`} style={{ 
+              color: isDragging ? THEME.accent.primary : THEME.text.tertiary 
+            }} />
+            <p style={{ color: THEME.text.secondary }}>
+              Drop PDF here or <span style={{ color: THEME.accent.primary }}>browse</span>
             </p>
-          </>
+          </div>
         )}
       </div>
 
-      {variant === 'hero' && (
-        <div className="mt-6 pt-4 border-t border-[#3A404A] flex flex-col gap-4">
-          <button 
-             onClick={onSkip}
-             className="w-full py-2 bg-[#3A404A] hover:bg-[#505967] text-white rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-medium"
-          >
-            <LayoutDashboard className="w-4 h-4" />
-            Skip Upload & View Dashboard
-          </button>
-          <p className="text-[10px] text-[#656D78] uppercase tracking-wide">
-            First Ray Capital • Proprietary Sector Playbooks
-          </p>
+      {uploadStatus && (
+        <div 
+          className="mt-4 p-3 rounded flex items-center gap-2 text-sm"
+          style={{
+            backgroundColor: uploadStatus.type === 'success' 
+              ? `${THEME.accent.primary}20` 
+              : `${THEME.semantic.negative}20`,
+            color: uploadStatus.type === 'success' 
+              ? THEME.accent.primary 
+              : THEME.semantic.negative
+          }}
+        >
+          {uploadStatus.type === 'success' ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+          <span>{uploadStatus.message}</span>
         </div>
       )}
     </div>
   );
 };
 
-// 4. METRICS CARD
-const MetricsCard = ({ data, isLoading, quarters, ticker }) => {
-  // Use data as-is (UNFILTERED) as per Requirement #3
-  const metricsList = data?.metrics || [];
+// ============================================================================
+// RESIZABLE COMPONENT
+// ============================================================================
+const ResizablePanel = ({ children, direction = 'horizontal', defaultSize = 50, minSize = 20, maxSize = 80 }) => {
+  const [size, setSize] = useState(defaultSize);
+  const [isDragging, setIsDragging] = useState(false);
+  const containerRef = useRef(null);
+
+  const handleMouseDown = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isDragging || !containerRef.current) return;
+
+      const container = containerRef.current.parentElement;
+      const rect = container.getBoundingClientRect();
+      
+      let newSize;
+      if (direction === 'horizontal') {
+        newSize = ((e.clientX - rect.left) / rect.width) * 100;
+      } else {
+        newSize = ((e.clientY - rect.top) / rect.height) * 100;
+      }
+      
+      newSize = Math.max(minSize, Math.min(maxSize, newSize));
+      setSize(newSize);
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, direction, minSize, maxSize]);
 
   return (
-    <div className="bg-[#2C343C] rounded-lg border border-[#3A404A] flex flex-col h-full shadow-sm overflow-hidden w-full">
-      <div className="p-3 border-b border-[#3A404A] flex justify-between items-center bg-[#2C343C] shrink-0">
-        <div className="flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-[#00D2B4]" />
-          <h3 className="font-semibold text-white">Key Metrics</h3>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={() => exportMetricsToCSV(data, quarters)} className="p-1.5 hover:bg-[#3A404A] rounded text-[#AAB2BD] hover:text-[#00D2B4]">
-            <Download className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      <div className="overflow-auto flex-1 w-full">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-40"><Loader2 className="w-6 h-6 animate-spin text-[#00D2B4]" /></div>
-        ) : !data ? (
-          <div className="p-6 text-center text-[#656D78] text-sm">No data loaded.</div>
-        ) : (
-          <table className="w-full text-sm min-w-[600px]">
-            <thead className="bg-[#222B35] sticky top-0 z-10">
-              <tr>
-                <th className="text-left py-2 px-3 font-medium text-[#AAB2BD] border-b border-[#3A404A] w-[25%]">Metric</th>
-                {quarters.map(q => (
-                  <th key={q} className="text-right py-2 px-3 font-medium text-[#AAB2BD] border-b border-[#3A404A] w-[18%]">{q}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {metricsList.map((m, i) => (
-                <tr key={i} className="border-b border-[#3A404A] hover:bg-[#353D46] transition-colors group">
-                  <td className="py-2 px-3 font-medium text-[#E0E0E0] group-hover:text-white truncate" title={m.metric_name}>
-                    {m.metric_name}
-                    <div className="text-[10px] text-[#656D78] font-normal">{m.unit}</div>
-                  </td>
-                  {quarters.map((q, idx) => {
-                     const val = m[q]?.value;
-                     // Logic for change: Compare current column Q with next column Q (previous time period)
-                     const prevQ = quarters[idx+1]; // Assuming left-to-right is Newest-to-Oldest? 
-                     // Wait, user config is FY25-Q3, FY25-Q4, FY26-Q1, FY26-Q2 (Oldest to Newest).
-                     // So comparison should be with index-1 (previous column).
-                     const prevColQ = quarters[idx-1]; 
-                     
-                     // If user config is ordered chronologically (Q3, Q4, Q1, Q2), we compare current to previous index
-                     const change = idx > 0 ? calculateChange(val, m[prevColQ]?.value) : null;
-                     
-                     return (
-                       <td key={q} className="text-right py-2 px-3">
-                         <div className="flex flex-col items-end">
-                           {formatValue(val, m.currency, '')}
-                           {change && (
-                             <span className={`text-[10px] flex items-center ${parseFloat(change) > 0 ? 'text-[#00D2B4]' : 'text-[#FC6E6E]'}`}>
-                               {parseFloat(change) > 0 ? <ArrowUpRight className="w-3 h-3"/> : <ArrowDownRight className="w-3 h-3"/>}
-                               {Math.abs(change)}%
-                             </span>
-                           )}
-                         </div>
-                       </td>
-                     );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+    <div 
+      ref={containerRef}
+      style={{
+        [direction === 'horizontal' ? 'width' : 'height']: `${size}%`,
+        position: 'relative'
+      }}
+    >
+      {children}
+      <div
+        onMouseDown={handleMouseDown}
+        className="absolute z-10 transition-colors"
+        style={{
+          [direction === 'horizontal' ? 'right' : 'bottom']: '-4px',
+          [direction === 'horizontal' ? 'top' : 'left']: 0,
+          [direction === 'horizontal' ? 'width' : 'height']: '8px',
+          [direction === 'horizontal' ? 'height' : 'width']: '100%',
+          cursor: direction === 'horizontal' ? 'col-resize' : 'row-resize',
+          backgroundColor: isDragging ? THEME.accent.primary : 'transparent'
+        }}
+        onMouseEnter={(e) => {
+          if (!isDragging) e.currentTarget.style.backgroundColor = `${THEME.accent.primary}40`;
+        }}
+        onMouseLeave={(e) => {
+          if (!isDragging) e.currentTarget.style.backgroundColor = 'transparent';
+        }}
+      />
     </div>
   );
 };
 
-// 5. GUIDANCE TABLE (Requirement: Strict 4 Column Table)
-const GuidanceTable = ({ data, isLoading, quarters, onOpenPDF }) => {
+// ============================================================================
+// METRICS CARD
+// ============================================================================
+const MetricsCard = ({ data, isLoading, error, quarters, onOpenPDF, onExport, ticker }) => {
+  // NO FILTERING - Show all metrics
+  const metrics = data?.metrics || [];
+  
+  if (isLoading) {
+    return (
+      <div className="rounded-xl border p-6 h-full flex items-center justify-center" style={{ 
+        backgroundColor: THEME.bg.secondary,
+        borderColor: THEME.border 
+      }}>
+        <Loader2 className="w-8 h-8 animate-spin" style={{ color: THEME.accent.primary }} />
+        <span className="ml-2" style={{ color: THEME.text.secondary }}>Loading metrics...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-xl border p-6 h-full flex flex-col items-center justify-center" style={{ 
+        backgroundColor: THEME.bg.secondary,
+        borderColor: THEME.semantic.negative 
+      }}>
+        <AlertCircle className="w-10 h-10 mb-2" style={{ color: THEME.semantic.negative }} />
+        <p className="font-medium" style={{ color: THEME.semantic.negative }}>Error loading metrics</p>
+        <p className="text-sm mt-1" style={{ color: THEME.text.secondary }}>{error}</p>
+      </div>
+    );
+  }
+
+  if (!data || metrics.length === 0) {
+    return (
+      <div className="rounded-xl border p-6 h-full flex flex-col items-center justify-center" style={{ 
+        backgroundColor: THEME.bg.secondary,
+        borderColor: THEME.border 
+      }}>
+        <TrendingUp className="w-10 h-10 mb-2" style={{ color: THEME.border }} />
+        <p className="font-medium" style={{ color: THEME.text.secondary }}>No metrics data</p>
+        <p className="text-sm mt-1" style={{ color: THEME.text.tertiary }}>Ingest documents to see metrics</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-[#2C343C] rounded-lg border border-[#3A404A] flex flex-col h-full shadow-sm overflow-hidden w-full">
-      <div className="p-3 border-b border-[#3A404A] flex justify-between items-center bg-[#2C343C] shrink-0">
+    <div className="rounded-xl border overflow-hidden h-full flex flex-col" style={{ 
+      backgroundColor: THEME.bg.secondary,
+      borderColor: THEME.border 
+    }}>
+      <div className="flex items-center justify-between p-3 border-b shrink-0" style={{ borderColor: THEME.border }}>
         <div className="flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-[#44D9E6]" />
-          <h3 className="font-semibold text-white">Forward Guidance</h3>
+          <TrendingUp className="w-5 h-5" style={{ color: THEME.accent.primary }} />
+          <h3 className="font-semibold" style={{ color: THEME.text.primary }}>Key Metrics</h3>
         </div>
-        <button onClick={() => exportGuidanceToCSV(data, quarters)} className="p-1.5 hover:bg-[#3A404A] rounded text-[#AAB2BD] hover:text-[#00D2B4]">
-          <Download className="w-4 h-4" />
+        <button
+          onClick={() => onExport(data, ticker)}
+          className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg transition-colors"
+          style={{
+            backgroundColor: THEME.bg.tertiary,
+            color: THEME.text.secondary
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = `${THEME.accent.primary}30`;
+            e.currentTarget.style.color = THEME.accent.primary;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = THEME.bg.tertiary;
+            e.currentTarget.style.color = THEME.text.secondary;
+          }}
+        >
+          <Download className="w-3 h-3" />
+          Export CSV
         </button>
       </div>
 
-      <div className="overflow-auto flex-1 w-full">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-40"><Loader2 className="w-6 h-6 animate-spin text-[#44D9E6]" /></div>
-        ) : !data ? (
-          <div className="p-6 text-center text-[#656D78] text-sm">No guidance data loaded.</div>
-        ) : (
-          <table className="w-full text-sm min-w-[1000px]">
-            <thead className="bg-[#222B35] sticky top-0 z-10">
-              <tr>
-                {/* Reduced width first column as requested */}
-                <th className="text-left py-2 px-3 font-medium text-[#AAB2BD] border-b border-[#3A404A] w-[12%] min-w-[120px]">Topic</th>
-                {quarters.map(q => (
-                  <th key={q} className="text-left py-2 px-3 font-medium text-[#AAB2BD] border-b border-[#3A404A] w-[22%] min-w-[200px]">{q}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {data.themes.map((themeGroup) => (
-                <React.Fragment key={themeGroup.theme}>
-                  {/* Theme Section Header */}
-                  <tr className="bg-[#1E2125]">
-                    <td colSpan={5} className="py-1 px-3 text-xs font-bold text-[#00D2B4] border-b border-[#3A404A] uppercase tracking-wider">
-                      {themeGroup.theme}
-                    </td>
-                  </tr>
-                  
-                  {themeGroup.items.map((item, idx) => (
-                    <tr key={`${themeGroup.theme}-${idx}`} className="border-b border-[#3A404A] hover:bg-[#353D46] transition-colors align-top">
-                      {/* Column 1: Topic */}
-                      <td className="py-2 px-3 text-[#E0E0E0] font-medium border-r border-[#3A404A]/30">
-                        {item.subtheme}
-                      </td>
-
-                      {/* Columns 2-5: Quarters */}
-                      {quarters.map(q => {
-                        const points = item[q];
-                        return (
-                          <td key={q} className="py-2 px-3 border-r border-[#3A404A]/30 last:border-0">
-                            {points && points.length > 0 ? (
-                              points.map((pt, ptIdx) => (
-                                <div key={ptIdx} className="mb-2 last:mb-0">
-                                  <p className="text-xs text-[#AAB2BD] leading-relaxed mb-1">{pt.guidance_text}</p>
-                                  <div className="flex flex-wrap items-center gap-1">
-                                    {pt.confidence_level && (
-                                      <span dangerouslySetInnerHTML={{ __html: getConfidenceBadge(pt.confidence_level).replace('class="', 'class="scale-90 origin-left ') }} />
-                                    )}
-                                    {/* Citation Button - Specific Page Number */}
-                                    {(pt.source_file || pt.source_filename) && (
-                                      <button 
-                                        onClick={() => onOpenPDF({ 
-                                          sourceFile: pt.source_file || pt.source_filename, 
-                                          pageNumber: pt.page_number || pt.guidance_page_number, 
-                                          quote: pt.exact_quote, 
-                                          pdfUrl: `${CONFIG.SUPABASE_STORAGE_URL}${pt.source_file || pt.source_filename}` 
-                                        })}
-                                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-[#1E2125] border border-[#3A404A] rounded text-[10px] text-[#44D9E6] hover:border-[#44D9E6] transition-colors"
-                                      >
-                                        <FileText className="w-3 h-3" />
-                                        <span>p.{pt.page_number || pt.guidance_page_number || '?'}</span>
-                                      </button>
-                                    )}
-                                  </div>
-                                </div>
-                              ))
-                            ) : (
-                              <span className="text-[#3A404A] text-xs">—</span>
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </React.Fragment>
+      <div className="overflow-auto flex-1">
+        <table className="w-full">
+          <thead className="sticky top-0 z-10">
+            <tr style={{ backgroundColor: THEME.bg.tertiary }}>
+              <th 
+                className="text-left py-3 px-4 text-sm font-bold sticky left-0 z-20 border-b"
+                style={{ 
+                  color: THEME.text.primary,
+                  backgroundColor: THEME.bg.tertiary,
+                  borderColor: THEME.border 
+                }}
+              >
+                Metric
+              </th>
+              {quarters.map((quarter) => (
+                <th 
+                  key={quarter} 
+                  className="text-right py-3 px-4 text-sm font-bold min-w-28 border-b"
+                  style={{ 
+                    color: THEME.text.primary,
+                    borderColor: THEME.border 
+                  }}
+                >
+                  {quarter}
+                </th>
               ))}
-            </tbody>
-          </table>
-        )}
+            </tr>
+          </thead>
+          <tbody>
+            {metrics.map((metric) => (
+              <tr 
+                key={metric.metric_name} 
+                className="border-t transition-colors"
+                style={{ borderColor: `${THEME.border}80` }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `${THEME.bg.tertiary}40`}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              >
+                <td 
+                  className="py-2.5 px-4 sticky left-0 z-10"
+                  style={{ backgroundColor: THEME.bg.secondary }}
+                >
+                  <div className="font-medium text-sm" style={{ color: THEME.text.primary }}>
+                    {metric.metric_name}
+                  </div>
+                  {(metric.unit || metric.currency) && (
+                    <div className="text-xs" style={{ color: THEME.text.tertiary }}>
+                      {metric.currency && metric.currency !== '' ? `${metric.currency} ` : ''}{metric.unit}
+                    </div>
+                  )}
+                </td>
+                {quarters.map((quarter, qIdx) => {
+                  const quarterData = metric[quarter];
+                  const prevQuarter = quarters[qIdx - 1]; // Previous is now to the LEFT (older)
+                  const prevData = prevQuarter ? metric[prevQuarter] : null;
+                  const change = calculateChange(quarterData?.value, prevData?.value);
+                  
+                  return (
+                    <td key={quarter} className="text-right py-2.5 px-4">
+                      <div className="flex flex-col items-end gap-0.5">
+                        {formatValue(quarterData?.value, metric.currency, '')}
+                        {change !== null && qIdx > 0 && (
+                          <span 
+                            className="text-xs flex items-center gap-0.5"
+                            style={{ 
+                              color: parseFloat(change) > 0 
+                                ? THEME.accent.primary 
+                                : parseFloat(change) < 0 
+                                ? THEME.semantic.negative 
+                                : THEME.text.secondary 
+                            }}
+                          >
+                            {parseFloat(change) > 0 ? <ArrowUpRight className="w-3 h-3" /> : 
+                             parseFloat(change) < 0 ? <ArrowDownRight className="w-3 h-3" /> : 
+                             <Minus className="w-3 h-3" />}
+                            {Math.abs(parseFloat(change))}%
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
 };
 
-// 6. CHAT CARD
+// ============================================================================
+// GUIDANCE CARD - Strictly 4 columns
+// ============================================================================
+const GuidanceCard = ({ data, isLoading, error, quarters, onOpenPDF, onExport, ticker }) => {
+  const [expandedThemes, setExpandedThemes] = useState({});
+
+  useEffect(() => {
+    if (data?.themes) {
+      const initial = {};
+      data.themes.forEach((theme, idx) => {
+        initial[theme.theme] = idx === 0;
+      });
+      setExpandedThemes(initial);
+    }
+  }, [data]);
+
+  const toggleTheme = (theme) => {
+    setExpandedThemes(prev => ({ ...prev, [theme]: !prev[theme] }));
+  };
+
+  const themeColors = {
+    EXPANSION: { icon: '🏗️', color: THEME.accent.primary },
+    FINANCIAL: { icon: '💰', color: THEME.accent.secondary },
+    OPERATIONAL: { icon: '⚙️', color: '#f59e0b' },
+    CAPEX: { icon: '📊', color: '#a855f7' },
+    REGULATORY: { icon: '📋', color: THEME.semantic.negative },
+    DIGITAL: { icon: '💻', color: THEME.accent.secondary },
+    OTHER: { icon: '📌', color: THEME.text.secondary }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="rounded-xl border p-6 h-full flex items-center justify-center" style={{ 
+        backgroundColor: THEME.bg.secondary,
+        borderColor: THEME.border 
+      }}>
+        <Loader2 className="w-8 h-8 animate-spin" style={{ color: THEME.accent.primary }} />
+        <span className="ml-2" style={{ color: THEME.text.secondary }}>Loading guidance...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-xl border p-6 h-full flex flex-col items-center justify-center" style={{ 
+        backgroundColor: THEME.bg.secondary,
+        borderColor: THEME.semantic.negative 
+      }}>
+        <AlertCircle className="w-10 h-10 mb-2" style={{ color: THEME.semantic.negative }} />
+        <p className="font-medium" style={{ color: THEME.semantic.negative }}>Error loading guidance</p>
+        <p className="text-sm mt-1" style={{ color: THEME.text.secondary }}>{error}</p>
+      </div>
+    );
+  }
+
+  if (!data || !data.themes || data.themes.length === 0) {
+    return (
+      <div className="rounded-xl border p-6 h-full flex flex-col items-center justify-center" style={{ 
+        backgroundColor: THEME.bg.secondary,
+        borderColor: THEME.border 
+      }}>
+        <Calendar className="w-10 h-10 mb-2" style={{ color: THEME.border }} />
+        <p className="font-medium" style={{ color: THEME.text.secondary }}>No guidance data</p>
+        <p className="text-sm mt-1" style={{ color: THEME.text.tertiary }}>Ingest transcripts to see guidance</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border overflow-hidden h-full flex flex-col" style={{ 
+      backgroundColor: THEME.bg.secondary,
+      borderColor: THEME.border 
+    }}>
+      <div className="flex items-center justify-between p-3 border-b shrink-0" style={{ borderColor: THEME.border }}>
+        <div className="flex items-center gap-2">
+          <Calendar className="w-5 h-5" style={{ color: THEME.accent.primary }} />
+          <h3 className="font-semibold" style={{ color: THEME.text.primary }}>Forward Guidance</h3>
+        </div>
+        <button
+          onClick={() => onExport(data, ticker)}
+          className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg transition-colors"
+          style={{
+            backgroundColor: THEME.bg.tertiary,
+            color: THEME.text.secondary
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = `${THEME.accent.primary}30`;
+            e.currentTarget.style.color = THEME.accent.primary;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = THEME.bg.tertiary;
+            e.currentTarget.style.color = THEME.text.secondary;
+          }}
+        >
+          <Download className="w-3 h-3" />
+          Export CSV
+        </button>
+      </div>
+
+      {/* Quarters header - 4 columns strictly */}
+      <div 
+        className="grid border-b shrink-0"
+        style={{ 
+          gridTemplateColumns: '180px repeat(4, 1fr)',
+          backgroundColor: THEME.bg.tertiary,
+          borderColor: THEME.border 
+        }}
+      >
+        <div className="py-2 px-3 text-sm font-bold" style={{ color: THEME.text.primary }}>
+          Theme
+        </div>
+        {quarters.map((quarter) => (
+          <div 
+            key={quarter} 
+            className="py-2 px-2 text-sm font-bold text-center"
+            style={{ color: THEME.text.primary }}
+          >
+            {quarter}
+          </div>
+        ))}
+      </div>
+
+      <div className="overflow-y-auto flex-1">
+        {data.themes.map((themeGroup) => {
+          const theme = themeColors[themeGroup.theme] || themeColors.OTHER;
+          return (
+            <div 
+              key={themeGroup.theme} 
+              className="border-b last:border-0"
+              style={{ borderColor: `${THEME.border}80` }}
+            >
+              <button
+                onClick={() => toggleTheme(themeGroup.theme)}
+                className="w-full flex items-center justify-between p-2.5 transition-colors"
+                style={{ color: THEME.text.primary }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `${THEME.bg.tertiary}50`}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-base">{theme.icon}</span>
+                  <span className="font-medium text-sm">{themeGroup.theme}</span>
+                  <span 
+                    className="text-xs px-2 py-0.5 rounded-full"
+                    style={{ 
+                      backgroundColor: THEME.bg.primary,
+                      color: THEME.text.tertiary 
+                    }}
+                  >
+                    {themeGroup.items?.length || 0}
+                  </span>
+                </div>
+                {expandedThemes[themeGroup.theme] ? (
+                  <ChevronDown className="w-4 h-4" style={{ color: THEME.text.secondary }} />
+                ) : (
+                  <ChevronRight className="w-4 h-4" style={{ color: THEME.text.secondary }} />
+                )}
+              </button>
+              
+              {expandedThemes[themeGroup.theme] && (
+                <div className="px-2.5 pb-2.5">
+                  {themeGroup.items?.map((item, idx) => (
+                    <div key={idx} className="mb-2 last:mb-0">
+                      <div 
+                        className="text-xs font-medium mb-1.5 flex items-center gap-1 pl-1"
+                        style={{ color: THEME.text.secondary }}
+                      >
+                        <div 
+                          className="w-1.5 h-1.5 rounded-full" 
+                          style={{ backgroundColor: theme.color }} 
+                        />
+                        {item.subtheme}
+                      </div>
+                      {/* Strictly 4-column grid */}
+                      <div 
+                        className="grid gap-1"
+                        style={{ gridTemplateColumns: '180px repeat(4, 1fr)' }}
+                      >
+                        <div></div>
+                        {quarters.map((quarter) => {
+                          const guidanceList = item[quarter];
+                          return (
+                            <div 
+                              key={quarter} 
+                              className="rounded-lg p-2 min-h-[50px]"
+                              style={{ backgroundColor: THEME.bg.primary }}
+                            >
+                              {guidanceList && Array.isArray(guidanceList) && guidanceList.length > 0 ? (
+                                guidanceList.map((g, gIdx) => (
+                                  <div 
+                                    key={gIdx} 
+                                    className="text-xs mb-2 last:mb-0"
+                                    style={{ color: THEME.text.primary }}
+                                  >
+                                    <p className="line-clamp-3 mb-1">{g.guidance_text}</p>
+                                    <div className="flex items-center gap-1 flex-wrap">
+                                      {g.confidence_level && (
+                                        <span 
+                                          className={`text-[10px] px-1.5 py-0.5 rounded border ${
+                                            getConfidenceBadge(g.confidence_level).bg
+                                          } ${getConfidenceBadge(g.confidence_level).text} ${
+                                            getConfidenceBadge(g.confidence_level).border
+                                          }`}
+                                        >
+                                          {g.confidence_level}
+                                        </span>
+                                      )}
+                                      {(g.source_file || g.source_filename) && (
+                                        <CitationLink 
+                                          sourceFile={g.source_file || g.source_filename}
+                                          pageNumber={g.page_number || g.guidance_page_number}
+                                          quote={g.exact_quote}
+                                          onOpenPDF={onOpenPDF}
+                                        />
+                                      )}
+                                    </div>
+                                  </div>
+                                ))
+                              ) : (
+                                <span className="text-xs" style={{ color: THEME.text.muted }}>—</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// ============================================================================
+// CHAT CARD
+// ============================================================================
 const ChatCard = ({ ticker, onOpenPDF }) => {
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState([
+    {
+      role: 'assistant',
+      content: `Ask me anything about ${ticker}'s earnings, guidance, or operational metrics.`
+    }
+  ]);
   const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const scrollRef = useRef(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
 
-  useEffect(() => { setMessages([{ role: 'assistant', content: `Ask Q&A for ${ticker}.` }]); }, [ticker]);
-  useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [messages]);
+  useEffect(() => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
 
-  const handleSend = async (e) => {
+  useEffect(() => {
+    setMessages([{
+      role: 'assistant',
+      content: `Ask me anything about ${ticker}'s earnings, guidance, or operational metrics.`
+    }]);
+  }, [ticker]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!input.trim() || loading) return;
-    const userMsg = input.trim();
+    e.stopPropagation();
+    
+    if (!input.trim() || isLoading) return;
+
+    const userMessage = input.trim();
     setInput('');
-    setMessages(p => [...p, { role: 'user', content: userMsg }]);
-    setLoading(true);
+    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    setIsLoading(true);
 
     try {
-      const res = await fetch(CONFIG.CHAT_ENDPOINT, {
+      const response = await fetch(CONFIG.CHAT_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chatInput: userMsg, ticker })
+        body: JSON.stringify({ chatInput: userMessage, ticker })
       });
-      const data = await res.json();
-      const result = Array.isArray(data) ? data[0] : data;
-      const output = result.output || result.response || result.text || '';
-      const citations = (result.citations || []).map(c => ({
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      
+      let output, citations;
+      
+      if (Array.isArray(data)) {
+        const firstItem = data[0] || {};
+        output = firstItem.output || firstItem.response || firstItem.text || '';
+        citations = firstItem.citations || [];
+      } else {
+        output = data.output || data.response || data.text || JSON.stringify(data);
+        citations = data.citations || [];
+      }
+      
+      const mappedCitations = citations.map(c => ({
         sourceFile: c.source_file || c.source || c.sourceFile,
         pageNumber: c.page_number || c.page || c.pageNumber,
         quote: c.quote || c.exact_quote
       }));
-
-      setMessages(p => [...p, { role: 'assistant', content: output, citations }]);
-    } catch (err) {
-      setMessages(p => [...p, { role: 'assistant', content: 'Connection Error.' }]);
+      
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: output,
+        citations: mappedCitations
+      }]);
+    } catch (error) {
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: `Error: ${error.message}`,
+        isError: true
+      }]);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e);
     }
   };
 
   return (
-    <div className="bg-[#2C343C] rounded-lg border border-[#3A404A] flex flex-col h-full shadow-sm overflow-hidden w-full">
-      <div className="p-3 border-b border-[#3A404A] bg-[#2C343C] flex gap-2 items-center shrink-0">
-        <MessageSquare className="w-4 h-4 text-[#9F7AEA]" />
-        <h3 className="font-semibold text-white">Q&A Assistant</h3>
+    <div 
+      className="rounded-xl border overflow-hidden flex flex-col h-full"
+      style={{ 
+        backgroundColor: THEME.bg.secondary,
+        borderColor: THEME.border 
+      }}
+    >
+      <div 
+        className="flex items-center gap-2 p-3 border-b shrink-0"
+        style={{ borderColor: THEME.border }}
+      >
+        <MessageSquare className="w-5 h-5" style={{ color: THEME.accent.primary }} />
+        <h3 className="font-semibold" style={{ color: THEME.text.primary }}>Ask Questions</h3>
       </div>
-      
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-4 bg-[#1E2125]">
-        {messages.map((m, i) => (
-          <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[90%] rounded-lg p-2.5 text-sm leading-relaxed ${
-              m.role === 'user' ? 'bg-[#3A404A] text-white border border-[#4E5660]' : 'bg-[#2C343C] text-[#AAB2BD] border border-[#3A404A]'
-            }`}>
-              <p className="whitespace-pre-wrap">{m.content}</p>
-              {m.citations?.length > 0 && (
-                <div className="mt-2 pt-2 border-t border-[#3A404A] flex flex-wrap gap-2">
-                  {m.citations.map((c, idx) => (
-                    <button 
-                      key={idx}
-                      onClick={() => onOpenPDF({ sourceFile: c.sourceFile, pageNumber: c.pageNumber, quote: c.quote, pdfUrl: `${CONFIG.SUPABASE_STORAGE_URL}${c.sourceFile}` })}
-                      className="text-[10px] px-2 py-1 bg-[#1E2125] border border-[#3A404A] rounded text-[#44D9E6] hover:border-[#44D9E6] transition-colors flex items-center gap-1"
-                    >
-                      <FileText className="w-3 h-3"/> p.{c.pageNumber}
-                    </button>
+
+      <div 
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto p-3 space-y-2"
+        style={{ scrollBehavior: 'smooth' }}
+      >
+        {messages.map((message, idx) => (
+          <div key={idx} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div 
+              className="max-w-[85%] rounded-lg p-2.5 text-sm"
+              style={{
+                backgroundColor: message.role === 'user'
+                  ? THEME.accent.primary
+                  : message.isError
+                  ? `${THEME.semantic.negative}20`
+                  : THEME.bg.primary,
+                color: message.role === 'user' ? 'white' : message.isError ? THEME.semantic.negative : THEME.text.primary,
+                border: message.role === 'assistant' ? `1px solid ${THEME.border}` : 'none'
+              }}
+            >
+              <p className="whitespace-pre-wrap">{message.content}</p>
+              {message.citations?.length > 0 && (
+                <div 
+                  className="mt-2 pt-2 flex flex-wrap gap-1"
+                  style={{ borderTop: `1px solid ${THEME.border}` }}
+                >
+                  {message.citations.map((c, i) => (
+                    <CitationLink 
+                      key={i} 
+                      sourceFile={c.sourceFile} 
+                      pageNumber={c.pageNumber} 
+                      quote={c.quote} 
+                      onOpenPDF={onOpenPDF} 
+                    />
                   ))}
                 </div>
               )}
             </div>
           </div>
         ))}
-        {loading && <Loader2 className="w-4 h-4 animate-spin text-[#9F7AEA]" />}
+        {isLoading && (
+          <div className="flex justify-start">
+            <div 
+              className="rounded-lg p-2.5 border"
+              style={{ 
+                backgroundColor: THEME.bg.primary,
+                borderColor: THEME.border 
+              }}
+            >
+              <Loader2 className="w-4 h-4 animate-spin" style={{ color: THEME.accent.primary }} />
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={handleSend} className="p-2 bg-[#222B35] border-t border-[#3A404A] shrink-0">
+      <form 
+        onSubmit={handleSubmit} 
+        className="p-2.5 border-t shrink-0"
+        style={{ borderColor: THEME.border }}
+      >
         <div className="flex gap-2">
-          <input 
-            value={input} onChange={e => setInput(e.target.value)}
-            placeholder="Ask about margins, guidance..."
-            className="flex-1 bg-[#181A1E] border border-[#3A404A] rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-[#9F7AEA]"
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask about earnings, guidance..."
+            className="flex-1 px-3 py-2 rounded-lg text-sm focus:outline-none"
+            style={{
+              backgroundColor: THEME.bg.primary,
+              borderColor: THEME.border,
+              color: THEME.text.primary,
+              border: `1px solid ${THEME.border}`
+            }}
+            onFocus={(e) => e.currentTarget.style.borderColor = THEME.accent.primary}
+            onBlur={(e) => e.currentTarget.style.borderColor = THEME.border}
+            disabled={isLoading}
           />
-          <button type="submit" disabled={loading || !input} className="bg-[#9F7AEA] hover:bg-[#805AD5] text-white p-1.5 rounded transition-colors disabled:opacity-50">
-            <Send className="w-4 h-4" />
+          <button
+            type="submit"
+            disabled={isLoading || !input.trim()}
+            className="px-3 py-2 rounded-lg transition-colors disabled:opacity-50"
+            style={{ backgroundColor: THEME.accent.primary }}
+            onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.backgroundColor = THEME.accent.secondary)}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = THEME.accent.primary}
+          >
+            <Send className="w-4 h-4 text-white" />
           </button>
         </div>
       </form>
@@ -518,161 +1151,330 @@ const ChatCard = ({ ticker, onOpenPDF }) => {
 };
 
 // ============================================================================
+// LANDING VIEW
+// ============================================================================
+const LandingView = ({ onSkip }) => {
+  return (
+    <div 
+      className="h-screen flex flex-col items-center justify-center p-8"
+      style={{ backgroundColor: THEME.bg.primary }}
+    >
+      <div className="max-w-2xl w-full">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div 
+            className="inline-flex p-4 rounded-2xl mb-4"
+            style={{ 
+              background: `linear-gradient(135deg, ${THEME.accent.primary}, ${THEME.accent.secondary})`,
+              boxShadow: `0 8px 32px ${THEME.accent.primary}40`
+            }}
+          >
+            <Brain className="w-12 h-12 text-white" />
+          </div>
+          <h1 className="text-4xl font-bold mb-3" style={{ color: THEME.text.primary }}>
+            Financial Analysis Agent
+          </h1>
+          <p className="text-lg mb-2" style={{ color: THEME.text.secondary }}>
+            Upload Quarterly Earnings Transcripts to begin analysis
+          </p>
+        </div>
+
+        {/* Upload Section */}
+        <FileUploadSection />
+
+        {/* Skip Button */}
+        <div className="text-center mt-6">
+          <button
+            onClick={onSkip}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg transition-colors font-medium"
+            style={{
+              backgroundColor: THEME.bg.secondary,
+              color: THEME.text.secondary,
+              border: `1px solid ${THEME.border}`
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = THEME.bg.tertiary;
+              e.currentTarget.style.color = THEME.accent.primary;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = THEME.bg.secondary;
+              e.currentTarget.style.color = THEME.text.secondary;
+            }}
+          >
+            Skip to Dashboard
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Disclaimer */}
+        <div className="mt-8 text-center">
+          <p className="text-xs" style={{ color: THEME.text.muted }}>
+            This dashboard is custom-built using proprietary sector playbooks of First Ray Capital.<br/>
+            Unauthorized access is prohibited.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================================
 // MAIN APP
 // ============================================================================
 export default function App() {
-  const [view, setView] = useState('landing'); // 'landing' or 'dashboard'
-  const [sector, setSector] = useState('Healthcare');
-  const [ticker, setTicker] = useState('MAXHEALTH');
-  const [metrics, setMetrics] = useState(null);
-  const [guidance, setGuidance] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [pdfViewer, setPdfViewer] = useState({ isOpen: false, pdfUrl: null });
+  const [viewMode, setViewMode] = useState('landing'); // 'landing' or 'dashboard'
+  const [selectedSector, setSelectedSector] = useState('Healthcare');
+  const [selectedTicker, setSelectedTicker] = useState('MAXHEALTH');
+  const [metricsData, setMetricsData] = useState(null);
+  const [guidanceData, setGuidanceData] = useState(null);
+  const [isLoadingMetrics, setIsLoadingMetrics] = useState(false);
+  const [isLoadingGuidance, setIsLoadingGuidance] = useState(false);
+  const [metricsError, setMetricsError] = useState(null);
+  const [guidanceError, setGuidanceError] = useState(null);
+  
+  const [pdfViewer, setPdfViewer] = useState({
+    isOpen: false, pdfUrl: null, pageNumber: 1, quote: null, sourceFile: null
+  });
 
-  // Update ticker list based on sector
-  useEffect(() => {
-    const list = CONFIG.SECTORS[sector] || [];
-    if (list.length && !list.includes(ticker)) setTicker(list[0]);
-  }, [sector]);
+  const openPDF = (data) => setPdfViewer({ isOpen: true, ...data });
+  const closePDF = () => setPdfViewer(prev => ({ ...prev, isOpen: false }));
 
-  // Main Data Fetcher
-  const loadData = async (targetTicker) => {
-    const t = targetTicker || ticker;
-    setLoading(true);
+  const availableTickers = CONFIG.SECTORS[selectedSector] || [];
+
+  const fetchData = async (ticker) => {
+    setIsLoadingMetrics(true);
+    setIsLoadingGuidance(true);
+    setMetricsError(null);
+    setGuidanceError(null);
+
     try {
-      const [mRes, gRes] = await Promise.all([
-        fetch(CONFIG.METRICS_ENDPOINT, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ticker: t }) }),
-        fetch(CONFIG.GUIDANCE_ENDPOINT, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ticker: t }) })
-      ]);
-      if (mRes.ok) setMetrics(await mRes.json());
-      if (gRes.ok) setGuidance(await gRes.json());
-    } catch (e) {
-      console.error(e);
+      const response = await fetch(CONFIG.METRICS_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticker })
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      setMetricsData(await response.json());
+    } catch (error) {
+      setMetricsError(error.message);
+      setMetricsData(null);
     } finally {
-      setLoading(false);
+      setIsLoadingMetrics(false);
+    }
+
+    try {
+      const response = await fetch(CONFIG.GUIDANCE_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticker })
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      setGuidanceData(await response.json());
+    } catch (error) {
+      setGuidanceError(error.message);
+      setGuidanceData(null);
+    } finally {
+      setIsLoadingGuidance(false);
     }
   };
 
-  // Logic to Skip Upload -> Load Dashboard with MAXHEALTH
-  const handleSkipToDashboard = () => {
-    setView('dashboard');
-    setTicker('MAXHEALTH');
-    loadData('MAXHEALTH');
-  };
+  useEffect(() => {
+    if (selectedTicker && viewMode === 'dashboard') {
+      fetchData(selectedTicker);
+    }
+  }, [selectedTicker, viewMode]);
 
+  useEffect(() => {
+    const tickers = CONFIG.SECTORS[selectedSector] || [];
+    if (tickers.length > 0 && !tickers.includes(selectedTicker)) {
+      setSelectedTicker(tickers[0]);
+    }
+  }, [selectedSector]);
+
+  const displayQuarters = metricsData?.quarters || guidanceData?.quarters || CONFIG.DISPLAY_QUARTERS;
+  const companyName = CONFIG.COMPANY_NAMES[selectedTicker] || selectedTicker;
+
+  // Show landing view
+  if (viewMode === 'landing') {
+    return <LandingView onSkip={() => setViewMode('dashboard')} />;
+  }
+
+  // Show dashboard view
   return (
-    <div className="h-screen flex flex-col bg-[#1E2125] text-[#AAB2BD] font-sans overflow-hidden">
-      
-      {/* HEADER: Only show filters if in Dashboard View */}
-      <header className="h-[56px] border-b border-[#3A404A] bg-[#222B35] flex items-center justify-between px-4 shrink-0">
-        <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('landing')}>
-          <div className="w-8 h-8 rounded bg-gradient-to-br from-[#00D2B4] to-[#44D9E6] flex items-center justify-center text-[#1E2125]">
-            <Brain className="w-5 h-5" />
-          </div>
-          <h1 className="font-bold text-white tracking-tight">Financial Analysis Agent</h1>
-        </div>
+    <div className="h-screen flex flex-col overflow-hidden" style={{ backgroundColor: THEME.bg.primary }}>
+      <PDFViewerPanel {...pdfViewer} onClose={closePDF} />
 
-        {view === 'dashboard' && (
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <select 
-                value={sector} onChange={e => setSector(e.target.value)}
-                className="bg-[#181A1E] border border-[#3A404A] text-white text-xs py-1.5 px-2 rounded focus:outline-none"
+      {/* Header */}
+      <header 
+        className="border-b shrink-0"
+        style={{ 
+          backgroundColor: THEME.bg.secondary,
+          borderColor: THEME.border 
+        }}
+      >
+        <div className="w-full px-4 py-3">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <div 
+                className="p-2 rounded-lg"
+                style={{ 
+                  background: `linear-gradient(135deg, ${THEME.accent.primary}, ${THEME.accent.secondary})`,
+                  boxShadow: `0 4px 12px ${THEME.accent.primary}40`
+                }}
               >
-                {Object.keys(CONFIG.SECTORS).map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-              <select 
-                value={ticker} onChange={e => { setTicker(e.target.value); loadData(e.target.value); }}
-                className="bg-[#181A1E] border border-[#3A404A] text-[#00D2B4] font-medium text-xs py-1.5 px-2 rounded focus:outline-none"
-              >
-                {(CONFIG.SECTORS[sector] || []).map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
+                <Brain className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-lg font-bold" style={{ color: THEME.text.primary }}>
+                  Financial Analysis Agent
+                </h1>
+                <p className="text-xs" style={{ color: THEME.text.tertiary }}>
+                  Powered by First Ray Capital
+                </p>
+              </div>
             </div>
-            <button 
-              onClick={() => loadData(ticker)} disabled={loading}
-              className="p-1.5 bg-[#3A404A] rounded hover:bg-[#00D2B4] hover:text-[#1E2125] transition-colors text-white"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="flex flex-col">
+                <label 
+                  className="text-[10px] uppercase tracking-wider mb-1"
+                  style={{ color: THEME.text.tertiary }}
+                >
+                  Sector
+                </label>
+                <select
+                  value={selectedSector}
+                  onChange={(e) => setSelectedSector(e.target.value)}
+                  className="px-3 py-1.5 rounded-lg text-sm font-medium border focus:outline-none"
+                  style={{ 
+                    backgroundColor: THEME.bg.input,
+                    borderColor: THEME.border,
+                    color: THEME.text.primary,
+                  }}
+                >
+                  {Object.keys(CONFIG.SECTORS).map(sector => (
+                    <option key={sector} value={sector}>{sector}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col">
+                <label 
+                  className="text-[10px] uppercase tracking-wider mb-1"
+                  style={{ color: THEME.text.tertiary }}
+                >
+                  Company
+                </label>
+                <select
+                  value={selectedTicker}
+                  onChange={(e) => setSelectedTicker(e.target.value)}
+                  disabled={availableTickers.length === 0}
+                  className="px-3 py-1.5 rounded-lg text-sm font-medium border focus:outline-none disabled:opacity-50"
+                  style={{ 
+                    backgroundColor: THEME.bg.input,
+                    borderColor: THEME.border,
+                    color: THEME.accent.primary,
+                  }}
+                >
+                  {availableTickers.length > 0 ? (
+                    availableTickers.map(ticker => (
+                      <option key={ticker} value={ticker}>{ticker}</option>
+                    ))
+                  ) : (
+                    <option value="">No companies</option>
+                  )}
+                </select>
+              </div>
+
+              <button
+                onClick={() => fetchData(selectedTicker)}
+                disabled={isLoadingMetrics || isLoadingGuidance}
+                className="p-2 rounded-lg transition-colors disabled:opacity-50 self-end"
+                style={{ color: THEME.text.secondary }}
+                onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.backgroundColor = THEME.bg.tertiary)}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              >
+                <RefreshCw className={`w-5 h-5 ${(isLoadingMetrics || isLoadingGuidance) ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
           </div>
-        )}
+        </div>
       </header>
 
-      {/* BODY */}
-      <main className="flex-1 overflow-hidden relative">
-        
-        {/* VIEW: LANDING */}
-        {view === 'landing' && (
-          <div className="h-full flex flex-col items-center justify-center p-4 animate-in fade-in duration-500">
-            <FileUploadSection 
-              onUploadSuccess={() => { setView('dashboard'); loadData(ticker); }} 
-              onSkip={handleSkipToDashboard}
-              variant="hero" 
+      {/* Company headline */}
+      <div 
+        className="px-4 py-2 border-b shrink-0"
+        style={{ 
+          backgroundColor: THEME.bg.primary,
+          borderColor: `${THEME.border}80` 
+        }}
+      >
+        <div className="flex items-center gap-2">
+          <Building2 className="w-5 h-5" style={{ color: THEME.accent.primary }} />
+          <h2 className="text-lg font-bold" style={{ color: THEME.text.primary }}>{companyName}</h2>
+          <span 
+            className="text-sm px-2 py-0.5 rounded-full"
+            style={{ 
+              backgroundColor: THEME.bg.tertiary,
+              color: THEME.text.secondary 
+            }}
+          >
+            {selectedTicker}
+          </span>
+        </div>
+      </div>
+
+      {/* Main Content - Resizable */}
+      <main className="flex-1 overflow-hidden p-3">
+        <div className="h-full flex gap-3">
+          {/* Left Column - Resizable horizontally */}
+          <ResizablePanel direction="horizontal" defaultSize={65} minSize={40} maxSize={75}>
+            <div className="h-full flex flex-col gap-3">
+              {/* Guidance - Resizable vertically */}
+              <ResizablePanel direction="vertical" defaultSize={50} minSize={30} maxSize={70}>
+                <GuidanceCard
+                  data={guidanceData}
+                  isLoading={isLoadingGuidance}
+                  error={guidanceError}
+                  quarters={displayQuarters}
+                  onOpenPDF={openPDF}
+                  onExport={exportGuidanceToCSV}
+                  ticker={selectedTicker}
+                />
+              </ResizablePanel>
+              
+              {/* Chat */}
+              <div className="flex-1 min-h-0">
+                <ChatCard ticker={selectedTicker} onOpenPDF={openPDF} />
+              </div>
+            </div>
+          </ResizablePanel>
+
+          {/* Right Column - Metrics */}
+          <div className="flex-1 min-h-0">
+            <MetricsCard
+              data={metricsData}
+              isLoading={isLoadingMetrics}
+              error={metricsError}
+              quarters={displayQuarters}
+              onOpenPDF={openPDF}
+              onExport={exportMetricsToCSV}
+              ticker={selectedTicker}
             />
           </div>
-        )}
-
-        {/* VIEW: DASHBOARD - Resizable Layout */}
-        {view === 'dashboard' && (
-          <div className="h-full w-full animate-in slide-in-from-bottom-4 duration-500">
-            {/* Horizontal Split: Left (Guidance/Chat) vs Right (Metrics) */}
-            <PanelGroup direction="horizontal" autoSaveId="dashboard-layout">
-              
-              {/* LEFT SIDE (Guidance + Chat) */}
-              <Panel defaultSize={65} minSize={30}>
-                <div className="h-full flex flex-col p-3">
-                   {/* Vertical Split inside Left Side */}
-                   <PanelGroup direction="vertical">
-                      {/* Top: Guidance */}
-                      <Panel defaultSize={60} minSize={20}>
-                        <div className="h-full pb-1.5">
-                          <GuidanceTable
-                            data={guidance} 
-                            isLoading={loading} 
-                            quarters={CONFIG.DISPLAY_QUARTERS} 
-                            onOpenPDF={(d) => setPdfViewer({ isOpen: true, ...d })} 
-                          />
-                        </div>
-                      </Panel>
-                      
-                      <HorizontalResizeHandle />
-
-                      {/* Bottom: Chat */}
-                      <Panel defaultSize={40} minSize={20}>
-                        <div className="h-full pt-1.5">
-                          <ChatCard ticker={ticker} onOpenPDF={(d) => setPdfViewer({ isOpen: true, ...d })} />
-                        </div>
-                      </Panel>
-                   </PanelGroup>
-                </div>
-              </Panel>
-
-              <ResizeHandle />
-
-              {/* RIGHT SIDE (Metrics) */}
-              <Panel defaultSize={35} minSize={20}>
-                <div className="h-full p-3 pl-0">
-                  <MetricsCard 
-                    data={metrics} 
-                    isLoading={loading} 
-                    quarters={CONFIG.DISPLAY_QUARTERS} 
-                    ticker={ticker} 
-                  />
-                </div>
-              </Panel>
-
-            </PanelGroup>
-          </div>
-        )}
-
-        {/* PDF OVERLAY - Slides in from right, covers Metrics Panel */}
-        <PDFViewerPanel 
-          {...pdfViewer} 
-          onClose={() => setPdfViewer(p => ({ ...p, isOpen: false }))} 
-        />
-        
+        </div>
       </main>
+
+      {/* Footer */}
+      <div 
+        className="py-2 text-center text-xs shrink-0 border-t"
+        style={{ 
+          color: THEME.text.muted,
+          borderColor: `${THEME.border}50` 
+        }}
+      >
+        <p>Powered by AI • Data extracted from earnings calls & investor presentations</p>
+      </div>
     </div>
   );
 }
-// Vercel build fix retry
