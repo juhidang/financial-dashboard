@@ -1053,10 +1053,10 @@ const GuidanceCard = ({ data, isLoading, error, quarters, onOpenPDF, onExport, t
             >
               <button
                 onClick={() => toggleTheme(themeGroup.theme)}
-                className="w-full flex items-center justify-between p-2.5 transition-colors"
-                style={{ color: THEME.text.primary }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `${THEME.bg.tertiary}50`}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                className="w-full flex items-center justify-between p-2.5 transition-colors sticky top-0 z-20"
+                style={{ color: THEME.text.primary, backgroundColor: THEME.bg.secondary }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `${THEME.bg.tertiary}`}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = THEME.bg.secondary}
               >
                 <div className="flex items-center gap-2">
                   <span className="text-base">{theme.icon}</span>
@@ -1083,8 +1083,8 @@ const GuidanceCard = ({ data, isLoading, error, quarters, onOpenPDF, onExport, t
                   {themeGroup.items?.map((item, idx) => (
                     <div key={idx} className="mb-2 last:mb-0">
                       <div 
-                        className="text-xs font-medium mb-1.5 flex items-center gap-1 pl-1"
-                        style={{ color: THEME.text.secondary }}
+                        className="text-xs font-medium mb-1.5 flex items-center gap-1 pl-1 sticky top-[42px] z-10 py-1"
+                        style={{ color: THEME.text.secondary, backgroundColor: THEME.bg.secondary }}
                       >
                         <div 
                           className="w-1.5 h-1.5 rounded-full" 
@@ -1113,7 +1113,7 @@ const GuidanceCard = ({ data, isLoading, error, quarters, onOpenPDF, onExport, t
                                     className="text-xs mb-2 last:mb-0"
                                     style={{ color: THEME.text.primary }}
                                   >
-                                    <p className="line-clamp-3 mb-1">{g.guidance_text}</p>
+                                    <p className="line-clamp-4 mb-1">{g.guidance_text}</p>
                                     <div className="flex items-center gap-1 flex-wrap">
                                       {g.confidence_level && (() => {
                                         const badge = getConfidenceBadge(g.confidence_level);
