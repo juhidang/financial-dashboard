@@ -574,6 +574,7 @@ const MetricsCard = ({ data, isLoading, error, quarters, onOpenPDF, onExport, ti
   const [editingCell, setEditingCell] = useState(null); // Track which cell is being edited: { metricName, quarter }
   const [editInputValue, setEditInputValue] = useState('');
   const [annotations, setAnnotations] = useState('');
+  const [submittedNotes, setSubmittedNotes] = useState('');
   
   // NO FILTERING - Show all metrics
   const metrics = data?.metrics || [];
@@ -857,10 +858,22 @@ const MetricsCard = ({ data, isLoading, error, quarters, onOpenPDF, onExport, ti
           <FileText className="w-4 h-4" style={{ color: THEME.accent.primary }} />
           <h4 className="text-sm font-semibold" style={{ color: THEME.text.primary }}>Analyst Notes</h4>
         </div>
+        {submittedNotes && (
+          <div 
+            className="mb-3 px-3 py-2 rounded-lg text-sm"
+            style={{
+              backgroundColor: `${THEME.accent.primary}15`,
+              border: `1px solid ${THEME.accent.primary}30`,
+              color: THEME.text.primary
+            }}
+          >
+            <p className="whitespace-pre-wrap">{submittedNotes}</p>
+          </div>
+        )}
         <textarea
           value={annotations}
           onChange={(e) => setAnnotations(e.target.value)}
-          placeholder="Add comments or notes about these metrics..."
+          placeholder="Add comments, notes or feedback..."
           className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none resize-none mb-2"
           style={{
             backgroundColor: THEME.bg.input,
@@ -875,16 +888,22 @@ const MetricsCard = ({ data, isLoading, error, quarters, onOpenPDF, onExport, ti
         <div className="flex justify-end">
           <button
             onClick={() => {
-              // Handle submit action - you can add your submit logic here
-              console.log('Analyst notes submitted:', annotations);
+              if (annotations.trim()) {
+                setSubmittedNotes(annotations);
+                setAnnotations('');
+                console.log('Analyst notes submitted:', annotations);
+              }
             }}
-            className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            disabled={!annotations.trim()}
+            className="px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
               backgroundColor: THEME.accent.primary,
               color: 'white'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = THEME.accent.secondary;
+              if (!e.currentTarget.disabled) {
+                e.currentTarget.style.backgroundColor = THEME.accent.secondary;
+              }
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = THEME.accent.primary;
