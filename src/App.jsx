@@ -1435,13 +1435,12 @@ const LandingView = ({ onSkip }) => {
         {/* Header */}
         <div className="text-center mb-8">
           <div 
-            className="inline-flex items-center justify-center p-4 rounded-2xl mb-4"
+            className="inline-flex items-center justify-center p-4 rounded-2xl mb-4 overflow-hidden"
             style={{ 
-              backgroundColor: THEME.bg.secondary,
-              boxShadow: `0 8px 32px rgba(59, 130, 246, 0.3)`
+              backgroundColor: THEME.bg.secondary
             }}
           >
-            <Logo size={48} />
+            <Logo size={64} />
           </div>
           <h1 className="text-4xl font-bold mb-3" style={{ color: THEME.text.primary }}>
             MOSAIC
@@ -1588,13 +1587,12 @@ export default function App() {
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-3">
               <div 
-                className="p-2 rounded-lg flex items-center justify-center"
+                className="p-2 rounded-lg flex items-center justify-center overflow-hidden"
                 style={{ 
-                  backgroundColor: THEME.bg.secondary,
-                  boxShadow: `0 4px 12px rgba(59, 130, 246, 0.3)`
+                  backgroundColor: THEME.bg.secondary
                 }}
               >
-                <Logo size={24} />
+                <Logo size={32} />
               </div>
               <div>
                 <h1 className="text-lg font-bold" style={{ color: THEME.text.primary }}>
