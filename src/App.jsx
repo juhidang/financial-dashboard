@@ -59,15 +59,15 @@ const THEME = {
     muted: '#737373',        // Dark grey - very muted
   },
   accent: {
-    primary: '#0F4C81',      // Custom blue - primary accent (for interactive elements)
-    secondary: '#3A6FA8',     // Lighter blue - secondary accent
-    highlight: '#5A8FC4',     // Even lighter blue - highlights
+    primary: '#3b82f6',      // Standard blue-500 - primary accent (for interactive elements)
+    secondary: '#60a5fa',     // Standard blue-400 - secondary accent
+    highlight: '#93c5fd',     // Standard blue-300 - highlights
   },
   semantic: {
     positive: '#22c55e',     // Green 500
     negative: '#ef4444',     // Red 500
     warning: '#f59e0b',      // Amber 500
-    info: '#0F4C81',         // Custom blue
+    info: '#3b82f6',         // Standard blue-500
     edited: '#FFA372',       // Custom orange - for edited metrics
   },
   border: '#404040',         // Medium grey border
@@ -934,7 +934,7 @@ const MetricsCard = ({ data, isLoading, error, quarters, onOpenPDF, onExport, ti
                                 className="text-xs flex items-center gap-0.5"
                                 style={{ 
                                   color: parseFloat(change) > 0 
-                                    ? THEME.accent.primary 
+                                    ? THEME.semantic.positive 
                                     : parseFloat(change) < 0 
                                     ? THEME.semantic.negative 
                                     : THEME.text.secondary 
