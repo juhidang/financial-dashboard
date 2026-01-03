@@ -189,16 +189,121 @@ const exportGuidanceToCSV = (data, ticker) => {
 };
 
 // ============================================================================
-// LOGO COMPONENT
+// LOGO COMPONENT - Futuristic Brain Icon
 // ============================================================================
 const Logo = ({ size = 24, className = '' }) => {
   return (
-    <img 
-      src="/logo.png" 
-      alt="MOSAIC Logo" 
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 100 100"
       className={className}
-      style={{ width: `${size}px`, height: `${size}px`, objectFit: 'contain' }}
-    />
+      style={{ display: 'block' }}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      {/* Brain outline - stylized */}
+      <path
+        d="M50 12 C32 12, 20 22, 20 38 C15 40, 12 46, 15 52 C10 55, 8 62, 12 68 C8 72, 8 78, 15 82 C18 88, 25 92, 32 90 C35 94, 42 96, 50 94 C58 96, 65 94, 68 90 C75 92, 82 88, 85 82 C92 78, 92 72, 88 68 C92 62, 90 55, 85 52 C88 46, 85 40, 80 38 C80 22, 68 12, 50 12 Z"
+        fill="none"
+        stroke={THEME.accent.primary}
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* Brain hemispheres division */}
+      <path
+        d="M50 20 L50 80"
+        fill="none"
+        stroke={THEME.accent.primary}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        opacity="0.5"
+      />
+      {/* Brain folds/gyri - left hemisphere */}
+      <path
+        d="M30 28 Q35 32, 40 28 Q45 32, 50 28"
+        fill="none"
+        stroke={THEME.accent.primary}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        opacity="0.6"
+      />
+      <path
+        d="M25 45 Q30 50, 35 45 Q40 50, 45 45 Q48 50, 50 45"
+        fill="none"
+        stroke={THEME.accent.primary}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        opacity="0.6"
+      />
+      <path
+        d="M30 62 Q35 67, 40 62 Q45 67, 50 62"
+        fill="none"
+        stroke={THEME.accent.primary}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        opacity="0.6"
+      />
+      {/* Brain folds/gyri - right hemisphere */}
+      <path
+        d="M50 28 Q55 32, 60 28 Q65 32, 70 28"
+        fill="none"
+        stroke={THEME.accent.primary}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        opacity="0.6"
+      />
+      <path
+        d="M50 45 Q52 50, 55 45 Q60 50, 65 45 Q70 50, 75 45"
+        fill="none"
+        stroke={THEME.accent.primary}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        opacity="0.6"
+      />
+      <path
+        d="M50 62 Q55 67, 60 62 Q65 67, 70 62"
+        fill="none"
+        stroke={THEME.accent.primary}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        opacity="0.6"
+      />
+      {/* Neural network nodes - left */}
+      <circle cx="35" cy="32" r="2.5" fill={THEME.accent.primary} />
+      <circle cx="45" cy="32" r="2.5" fill={THEME.accent.primary} />
+      <circle cx="30" cy="48" r="2.5" fill={THEME.accent.primary} />
+      <circle cx="40" cy="48" r="2.5" fill={THEME.accent.primary} />
+      <circle cx="35" cy="65" r="2.5" fill={THEME.accent.primary} />
+      <circle cx="45" cy="65" r="2.5" fill={THEME.accent.primary} />
+      {/* Neural network nodes - right */}
+      <circle cx="55" cy="32" r="2.5" fill={THEME.accent.primary} />
+      <circle cx="65" cy="32" r="2.5" fill={THEME.accent.primary} />
+      <circle cx="60" cy="48" r="2.5" fill={THEME.accent.primary} />
+      <circle cx="70" cy="48" r="2.5" fill={THEME.accent.primary} />
+      <circle cx="55" cy="65" r="2.5" fill={THEME.accent.primary} />
+      <circle cx="65" cy="65" r="2.5" fill={THEME.accent.primary} />
+      {/* Central hub - highlighted */}
+      <circle cx="50" cy="50" r="4" fill={THEME.semantic.edited} opacity="0.9" />
+      <circle cx="50" cy="50" r="2.5" fill={THEME.semantic.edited} />
+      {/* Neural connections - left */}
+      <line x1="35" y1="32" x2="45" y2="32" stroke={THEME.accent.secondary} strokeWidth="1" opacity="0.5" />
+      <line x1="30" y1="48" x2="40" y2="48" stroke={THEME.accent.secondary} strokeWidth="1" opacity="0.5" />
+      <line x1="35" y1="65" x2="45" y2="65" stroke={THEME.accent.secondary} strokeWidth="1" opacity="0.5" />
+      <line x1="40" y1="32" x2="40" y2="48" stroke={THEME.accent.secondary} strokeWidth="1" opacity="0.5" />
+      <line x1="40" y1="48" x2="50" y2="50" stroke={THEME.accent.secondary} strokeWidth="1" opacity="0.5" />
+      {/* Neural connections - right */}
+      <line x1="55" y1="32" x2="65" y2="32" stroke={THEME.accent.secondary} strokeWidth="1" opacity="0.5" />
+      <line x1="60" y1="48" x2="70" y2="48" stroke={THEME.accent.secondary} strokeWidth="1" opacity="0.5" />
+      <line x1="55" y1="65" x2="65" y2="65" stroke={THEME.accent.secondary} strokeWidth="1" opacity="0.5" />
+      <line x1="60" y1="32" x2="60" y2="48" stroke={THEME.accent.secondary} strokeWidth="1" opacity="0.5" />
+      <line x1="60" y1="48" x2="50" y2="50" stroke={THEME.accent.secondary} strokeWidth="1" opacity="0.5" />
+      {/* Cross-hemisphere connections */}
+      <line x1="45" y1="32" x2="50" y2="50" stroke={THEME.accent.secondary} strokeWidth="1" opacity="0.4" />
+      <line x1="55" y1="32" x2="50" y2="50" stroke={THEME.accent.secondary} strokeWidth="1" opacity="0.4" />
+      <line x1="45" y1="65" x2="50" y2="50" stroke={THEME.accent.secondary} strokeWidth="1" opacity="0.4" />
+      <line x1="55" y1="65" x2="50" y2="50" stroke={THEME.accent.secondary} strokeWidth="1" opacity="0.4" />
+    </svg>
   );
 };
 
