@@ -1123,7 +1123,7 @@ const GuidanceCard = ({ data, isLoading, error, quarters, onOpenPDF, onExport, t
 
       {/* Quarters header - 4 columns strictly */}
       <div 
-        className="grid border-b shrink-0"
+        className="grid border-b shrink-0 sticky top-0 z-30"
         style={{ 
           gridTemplateColumns: '180px repeat(4, 1fr)',
           backgroundColor: THEME.bg.tertiary,
@@ -1156,9 +1156,22 @@ const GuidanceCard = ({ data, isLoading, error, quarters, onOpenPDF, onExport, t
               <button
                 onClick={() => toggleTheme(themeGroup.theme)}
                 className="w-full flex items-center justify-between p-2.5 transition-colors"
-                style={{ color: THEME.text.primary }}
+                style={{ 
+                  color: THEME.text.primary,
+                  position: expandedThemes[themeGroup.theme] ? 'sticky' : 'relative',
+                  top: expandedThemes[themeGroup.theme] ? '40px' : 'auto',
+                  zIndex: 20,
+                  backgroundColor: expandedThemes[themeGroup.theme] ? THEME.bg.secondary : 'transparent',
+                  borderBottom: expandedThemes[themeGroup.theme] ? `1px solid ${THEME.border}` : 'none'
+                }}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `${THEME.bg.tertiary}50`}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                onMouseLeave={(e) => {
+                  if (expandedThemes[themeGroup.theme]) {
+                    e.currentTarget.style.backgroundColor = THEME.bg.secondary;
+                  } else {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }
+                }}
               >
                 <div className="flex items-center gap-2">
                   <span className="text-base">{theme.icon}</span>
@@ -1186,7 +1199,16 @@ const GuidanceCard = ({ data, isLoading, error, quarters, onOpenPDF, onExport, t
                     <div key={idx} className="mb-2 last:mb-0">
                       <div 
                         className="text-xs font-medium mb-1.5 flex items-center gap-1 pl-1"
-                        style={{ color: THEME.text.secondary }}
+                        style={{ 
+                          color: THEME.text.secondary,
+                          position: 'sticky',
+                          top: '84px',
+                          zIndex: 10,
+                          backgroundColor: THEME.bg.secondary,
+                          paddingTop: '8px',
+                          paddingBottom: '4px',
+                          marginTop: idx === 0 ? '0' : '8px'
+                        }}
                       >
                         <div 
                           className="w-1.5 h-1.5 rounded-full" 
