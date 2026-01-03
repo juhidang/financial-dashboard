@@ -43,24 +43,24 @@ const CONFIG = {
 };
 
 // ============================================================================
-// THEME COLORS - Professional Blue (Matching MOSAIC Logo)
+// THEME COLORS - Monochromatic (Matching MOSAIC Logo: Black/White/Grey + Blue accents)
 // ============================================================================
 const THEME = {
   bg: {
-    primary: '#0f172a',      // Dark Slate Blue - main background
-    secondary: '#1e293b',    // Slate 800 - cards
-    tertiary: '#334155',     // Slate 700 - hover states
-    input: '#1e293b',        // Input backgrounds
+    primary: '#0a0a0a',      // Near black - main background (matching logo black hexagons)
+    secondary: '#1a1a1a',    // Dark grey - cards
+    tertiary: '#2a2a2a',     // Medium dark grey - hover states
+    input: '#1a1a1a',        // Input backgrounds
   },
   text: {
-    primary: '#ffffff',      // Clean white - headers
-    secondary: '#cbd5e1',    // Slate 300 - secondary text
-    tertiary: '#94a3b8',     // Slate 400 - dimmer text
-    muted: '#64748b',        // Slate 500 - very muted
+    primary: '#ffffff',      // Pure white - headers (matching logo white hexagons)
+    secondary: '#d4d4d4',    // Light grey - secondary text
+    tertiary: '#a3a3a3',     // Medium grey - dimmer text (matching logo light grey hexagons)
+    muted: '#737373',        // Dark grey - very muted
   },
   accent: {
-    primary: '#3b82f6',      // Blue 500 - primary (light blue from logo)
-    secondary: '#60a5fa',    // Blue 400 - secondary (lighter blue)
+    primary: '#3b82f6',      // Blue 500 - primary accent (for interactive elements)
+    secondary: '#60a5fa',    // Blue 400 - secondary accent
     highlight: '#93c5fd',    // Blue 300 - highlights
   },
   semantic: {
@@ -68,9 +68,10 @@ const THEME = {
     negative: '#ef4444',     // Red 500
     warning: '#f59e0b',      // Amber 500
     info: '#3b82f6',         // Blue 500
+    edited: '#f97316',       // Orange 500 - for edited metrics
   },
-  border: '#334155',         // Slate 700
-  shadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
+  border: '#404040',         // Medium grey border
+  shadow: '0 4px 6px rgba(0, 0, 0, 0.5)',
 };
 
 // ============================================================================
@@ -798,7 +799,7 @@ const MetricsCard = ({ data, isLoading, error, quarters, onOpenPDF, onExport, ti
                               <span 
                                 className="font-medium"
                                 style={{ 
-                                  color: isEdited ? THEME.accent.secondary : THEME.text.primary 
+                                  color: isEdited ? THEME.semantic.edited : THEME.text.primary 
                                 }}
                               >
                                 {formatValueForMetrics(displayValue)}
