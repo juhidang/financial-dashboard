@@ -59,16 +59,16 @@ const THEME = {
     muted: '#737373',        // Dark grey - very muted
   },
   accent: {
-    primary: '#3b82f6',      // Blue 500 - primary accent (for interactive elements)
-    secondary: '#60a5fa',    // Blue 400 - secondary accent
-    highlight: '#93c5fd',    // Blue 300 - highlights
+    primary: '#0A91AB',      // Custom blue - primary accent (for interactive elements)
+    secondary: '#2BA3B8',     // Lighter blue - secondary accent
+    highlight: '#4CB5C5',     // Even lighter blue - highlights
   },
   semantic: {
     positive: '#22c55e',     // Green 500
     negative: '#ef4444',     // Red 500
     warning: '#f59e0b',      // Amber 500
-    info: '#3b82f6',         // Blue 500
-    edited: '#f97316',       // Orange 500 - for edited metrics
+    info: '#0A91AB',         // Custom blue
+    edited: '#FFC045',       // Custom orange - for edited metrics
   },
   border: '#404040',         // Medium grey border
   shadow: '0 4px 6px rgba(0, 0, 0, 0.5)',
@@ -79,15 +79,16 @@ const THEME = {
 // ============================================================================
 
 const getConfidenceBadge = (level) => {
+  const levelUpper = level?.toUpperCase();
   const styles = {
-    COMMITTED: { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30' },
-    EXPECTED: { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/30' },
-    PLANNED: { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/30' },
-    ON_TRACK: { bg: 'bg-cyan-500/20', text: 'text-cyan-400', border: 'border-cyan-500/30' },
-    ACHIEVED: { bg: 'bg-violet-500/20', text: 'text-violet-400', border: 'border-violet-500/30' },
-    DEFAULT: { bg: 'bg-slate-500/20', text: 'text-slate-400', border: 'border-slate-500/30' }
+    COMMITTED: { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30', useInline: false },
+    EXPECTED: { bg: `${THEME.accent.primary}33`, text: THEME.accent.primary, border: `${THEME.accent.primary}4d`, useInline: true },
+    PLANNED: { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/30', useInline: false },
+    ON_TRACK: { bg: 'bg-cyan-500/20', text: 'text-cyan-400', border: 'border-cyan-500/30', useInline: false },
+    ACHIEVED: { bg: 'bg-violet-500/20', text: 'text-violet-400', border: 'border-violet-500/30', useInline: false },
+    DEFAULT: { bg: 'bg-slate-500/20', text: 'text-slate-400', border: 'border-slate-500/30', useInline: false }
   };
-  return styles[level?.toUpperCase()] || styles.DEFAULT;
+  return styles[levelUpper] || styles.DEFAULT;
 };
 
 const formatValue = (value, currency, unit, showCurrency = true) => {
@@ -1092,17 +1093,21 @@ const GuidanceCard = ({ data, isLoading, error, quarters, onOpenPDF, onExport, t
                                   >
                                     <p className="line-clamp-3 mb-1">{g.guidance_text}</p>
                                     <div className="flex items-center gap-1 flex-wrap">
-                                      {g.confidence_level && (
-                                        <span 
-                                          className={`text-[10px] px-1.5 py-0.5 rounded border ${
-                                            getConfidenceBadge(g.confidence_level).bg
-                                          } ${getConfidenceBadge(g.confidence_level).text} ${
-                                            getConfidenceBadge(g.confidence_level).border
-                                          }`}
-                                        >
-                                          {g.confidence_level}
-                                        </span>
-                                      )}
+                                      {g.confidence_level && (() => {
+                                        const badge = getConfidenceBadge(g.confidence_level);
+                                        return (
+                                          <span 
+                                            className={badge.useInline ? 'text-[10px] px-1.5 py-0.5 rounded border' : `text-[10px] px-1.5 py-0.5 rounded border ${badge.bg} ${badge.text} ${badge.border}`}
+                                            style={badge.useInline ? {
+                                              backgroundColor: badge.bg,
+                                              color: badge.text,
+                                              borderColor: badge.border
+                                            } : undefined}
+                                          >
+                                            {g.confidence_level}
+                                          </span>
+                                        );
+                                      })()}
                                       {(g.source_file || g.source_filename) && (
                                         <CitationLink 
                                           sourceFile={g.source_file || g.source_filename}
