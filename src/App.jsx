@@ -3,7 +3,8 @@ import {
   Send, FileText, TrendingUp, MessageSquare, ChevronDown, ChevronRight, 
   ExternalLink, Loader2, Building2, Calendar, RefreshCw, X, AlertCircle,
   BookOpen, Upload, Download, Zap, Database, Brain, Activity,
-  Plus, Check, ArrowUpRight, ArrowDownRight, Minus, ArrowRight
+  Plus, Check, ArrowUpRight, ArrowDownRight, Minus, ArrowRight,
+  ThumbsUp, ThumbsDown
 } from 'lucide-react';
 
 // ============================================================================
@@ -963,6 +964,7 @@ const ChatCard = ({ ticker, onOpenPDF }) => {
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [feedback, setFeedback] = useState({}); // Track feedback for each message by index
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
 
@@ -977,7 +979,17 @@ const ChatCard = ({ ticker, onOpenPDF }) => {
       role: 'assistant',
       content: `Ask me anything about ${ticker}'s earnings, guidance, or operational metrics.`
     }]);
+    setFeedback({}); // Reset feedback when ticker changes
   }, [ticker]);
+
+  const handleFeedback = (messageIdx, isPositive) => {
+    setFeedback(prev => ({
+      ...prev,
+      [messageIdx]: isPositive ? 'positive' : 'negative'
+    }));
+    // TODO: Send feedback to backend API
+    console.log(`Feedback for message ${messageIdx}: ${isPositive ? 'positive' : 'negative'}`);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -1076,20 +1088,80 @@ const ChatCard = ({ ticker, onOpenPDF }) => {
               }}
             >
               <p className="whitespace-pre-wrap">{message.content}</p>
-              {message.citations?.length > 0 && (
+              {(message.citations?.length > 0 || message.role === 'assistant') && (
                 <div 
-                  className="mt-2 pt-2 flex flex-wrap gap-1"
+                  className="mt-2 pt-2 flex items-center justify-between gap-2"
                   style={{ borderTop: `1px solid ${THEME.border}` }}
                 >
-                  {message.citations.map((c, i) => (
-                    <CitationLink 
-                      key={i} 
-                      sourceFile={c.sourceFile} 
-                      pageNumber={c.pageNumber} 
-                      quote={c.quote} 
-                      onOpenPDF={onOpenPDF} 
-                    />
-                  ))}
+                  <div className="flex flex-wrap gap-1">
+                    {message.citations?.map((c, i) => (
+                      <CitationLink 
+                        key={i} 
+                        sourceFile={c.sourceFile} 
+                        pageNumber={c.pageNumber} 
+                        quote={c.quote} 
+                        onOpenPDF={onOpenPDF} 
+                      />
+                    ))}
+                  </div>
+                  {message.role === 'assistant' && !message.isError && (
+                    <div className="flex items-center gap-1 ml-auto">
+                      <button
+                        onClick={() => handleFeedback(idx, true)}
+                        className="p-1.5 rounded transition-colors"
+                        style={{
+                          color: feedback[idx] === 'positive' 
+                            ? THEME.accent.primary 
+                            : THEME.text.secondary,
+                          backgroundColor: feedback[idx] === 'positive' 
+                            ? `${THEME.accent.primary}20` 
+                            : 'transparent'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (feedback[idx] !== 'positive') {
+                            e.currentTarget.style.color = THEME.accent.primary;
+                            e.currentTarget.style.backgroundColor = `${THEME.accent.primary}20`;
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (feedback[idx] !== 'positive') {
+                            e.currentTarget.style.color = THEME.text.secondary;
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }
+                        }}
+                        title="Thumbs up"
+                      >
+                        <ThumbsUp className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleFeedback(idx, false)}
+                        className="p-1.5 rounded transition-colors"
+                        style={{
+                          color: feedback[idx] === 'negative' 
+                            ? THEME.semantic.negative 
+                            : THEME.text.secondary,
+                          backgroundColor: feedback[idx] === 'negative' 
+                            ? `${THEME.semantic.negative}20` 
+                            : 'transparent'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (feedback[idx] !== 'negative') {
+                            e.currentTarget.style.color = THEME.semantic.negative;
+                            e.currentTarget.style.backgroundColor = `${THEME.semantic.negative}20`;
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (feedback[idx] !== 'negative') {
+                            e.currentTarget.style.color = THEME.text.secondary;
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }
+                        }}
+                        title="Thumbs down"
+                      >
+                        <ThumbsDown className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
