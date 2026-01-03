@@ -59,16 +59,16 @@ const THEME = {
     muted: '#737373',        // Dark grey - very muted
   },
   accent: {
-    primary: '#0A91AB',      // Custom blue - primary accent (for interactive elements)
-    secondary: '#2BA3B8',     // Lighter blue - secondary accent
-    highlight: '#4CB5C5',     // Even lighter blue - highlights
+    primary: '#0F4C81',      // Custom blue - primary accent (for interactive elements)
+    secondary: '#3A6FA8',     // Lighter blue - secondary accent
+    highlight: '#5A8FC4',     // Even lighter blue - highlights
   },
   semantic: {
     positive: '#22c55e',     // Green 500
     negative: '#ef4444',     // Red 500
     warning: '#f59e0b',      // Amber 500
-    info: '#0A91AB',         // Custom blue
-    edited: '#FFC045',       // Custom orange - for edited metrics
+    info: '#0F4C81',         // Custom blue
+    edited: '#FFA372',       // Custom orange - for edited metrics
   },
   border: '#404040',         // Medium grey border
   shadow: '0 4px 6px rgba(0, 0, 0, 0.5)',
@@ -80,9 +80,10 @@ const THEME = {
 
 const getConfidenceBadge = (level) => {
   const levelUpper = level?.toUpperCase();
+  const standardBlue = '#3b82f6'; // Standard blue-500 for EXPECTED badge
   const styles = {
     COMMITTED: { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30', useInline: false },
-    EXPECTED: { bg: `${THEME.accent.primary}33`, text: THEME.accent.primary, border: `${THEME.accent.primary}4d`, useInline: true },
+    EXPECTED: { bg: `${standardBlue}33`, text: standardBlue, border: `${standardBlue}4d`, useInline: true },
     PLANNED: { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/30', useInline: false },
     ON_TRACK: { bg: 'bg-cyan-500/20', text: 'text-cyan-400', border: 'border-cyan-500/30', useInline: false },
     ACHIEVED: { bg: 'bg-violet-500/20', text: 'text-violet-400', border: 'border-violet-500/30', useInline: false },
