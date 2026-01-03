@@ -4,7 +4,7 @@ import {
   ExternalLink, Loader2, Building2, Calendar, RefreshCw, X, AlertCircle,
   BookOpen, Upload, Download, Zap, Database, Brain, Activity,
   Plus, Check, ArrowUpRight, ArrowDownRight, Minus, ArrowRight,
-  ThumbsUp, ThumbsDown
+  ThumbsUp, ThumbsDown, Pencil
 } from 'lucide-react';
 
 // ============================================================================
@@ -89,12 +89,12 @@ const getConfidenceBadge = (level) => {
   return styles[level?.toUpperCase()] || styles.DEFAULT;
 };
 
-const formatValue = (value, currency, unit) => {
+const formatValue = (value, currency, unit, showCurrency = true) => {
   if (value === null || value === undefined || value === '') {
     return <span style={{ color: THEME.text.muted }}>—</span>;
   }
   const numValue = typeof value === 'string' ? parseFloat(value.replace(/,/g, '')) : value;
-  const prefix = currency === 'INR' ? '₹' : '';
+  const prefix = (currency === 'INR' && showCurrency) ? '₹' : '';
   const suffix = unit ? ` ${unit}` : '';
   const formattedValue = numValue.toLocaleString('en-IN');
   return (
@@ -554,8 +554,64 @@ const ResizablePanel = ({ children, direction = 'horizontal', defaultSize = 50, 
 // METRICS CARD
 // ============================================================================
 const MetricsCard = ({ data, isLoading, error, quarters, onOpenPDF, onExport, ticker }) => {
+  const [editedValues, setEditedValues] = useState({}); // Track edited values: { metricName: { quarter: value } }
+  const [editingCell, setEditingCell] = useState(null); // Track which cell is being edited: { metricName, quarter }
+  const [editInputValue, setEditInputValue] = useState('');
+  const [annotations, setAnnotations] = useState('');
+  
   // NO FILTERING - Show all metrics
   const metrics = data?.metrics || [];
+  
+  const handleEditClick = (metricName, quarter, currentValue) => {
+    setEditingCell({ metricName, quarter });
+    setEditInputValue(currentValue !== null && currentValue !== undefined ? String(currentValue).replace(/,/g, '') : '');
+  };
+
+  const handleEditSave = (metricName, quarter) => {
+    const value = editInputValue.trim() === '' ? null : parseFloat(editInputValue);
+    setEditedValues(prev => ({
+      ...prev,
+      [metricName]: {
+        ...prev[metricName],
+        [quarter]: value
+      }
+    }));
+    setEditingCell(null);
+    setEditInputValue('');
+  };
+
+  const handleEditCancel = () => {
+    setEditingCell(null);
+    setEditInputValue('');
+  };
+
+  const handleKeyDown = (e, metricName, quarter) => {
+    if (e.key === 'Enter') {
+      handleEditSave(metricName, quarter);
+    } else if (e.key === 'Escape') {
+      handleEditCancel();
+    }
+  };
+
+  const getDisplayValue = (metricName, quarter, originalValue) => {
+    if (editedValues[metricName]?.[quarter] !== undefined) {
+      return editedValues[metricName][quarter];
+    }
+    return originalValue;
+  };
+
+  const isValueEdited = (metricName, quarter) => {
+    return editedValues[metricName]?.[quarter] !== undefined;
+  };
+
+  const formatValueForMetrics = (value) => {
+    if (value === null || value === undefined || value === '') {
+      return <span style={{ color: THEME.text.muted }}>—</span>;
+    }
+    const numValue = typeof value === 'string' ? parseFloat(value.replace(/,/g, '')) : value;
+    const formattedValue = numValue.toLocaleString('en-IN');
+    return formattedValue;
+  };
   
   if (isLoading) {
     return (
@@ -658,7 +714,7 @@ const MetricsCard = ({ data, isLoading, error, quarters, onOpenPDF, onExport, ti
             {metrics.map((metric) => (
               <tr 
                 key={metric.metric_name} 
-                className="border-t transition-colors"
+                className="border-t transition-colors group"
                 style={{ borderColor: `${THEME.border}80` }}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `${THEME.bg.tertiary}40`}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -678,30 +734,96 @@ const MetricsCard = ({ data, isLoading, error, quarters, onOpenPDF, onExport, ti
                 </td>
                 {quarters.map((quarter, qIdx) => {
                   const quarterData = metric[quarter];
-                  const prevQuarter = quarters[qIdx - 1]; // Previous is now to the LEFT (older)
-                  const prevData = prevQuarter ? metric[prevQuarter] : null;
-                  const change = calculateChange(quarterData?.value, prevData?.value);
+                  const originalValue = quarterData?.value;
+                  const displayValue = getDisplayValue(metric.metric_name, quarter, originalValue);
+                  const prevQuarter = quarters[qIdx - 1];
+                  const prevOriginalValue = prevQuarter ? metric[prevQuarter]?.value : null;
+                  const prevDisplayValue = prevQuarter ? getDisplayValue(metric.metric_name, prevQuarter, prevOriginalValue) : null;
+                  const change = calculateChange(displayValue, prevDisplayValue);
+                  const isEditing = editingCell?.metricName === metric.metric_name && editingCell?.quarter === quarter;
+                  const isEdited = isValueEdited(metric.metric_name, quarter);
                   
                   return (
                     <td key={quarter} className="text-right py-2.5 px-4">
-                      <div className="flex flex-col items-end gap-0.5">
-                        {formatValue(quarterData?.value, metric.currency, '')}
-                        {change !== null && qIdx > 0 && (
-                          <span 
-                            className="text-xs flex items-center gap-0.5"
-                            style={{ 
-                              color: parseFloat(change) > 0 
-                                ? THEME.accent.primary 
-                                : parseFloat(change) < 0 
-                                ? THEME.semantic.negative 
-                                : THEME.text.secondary 
-                            }}
-                          >
-                            {parseFloat(change) > 0 ? <ArrowUpRight className="w-3 h-3" /> : 
-                             parseFloat(change) < 0 ? <ArrowDownRight className="w-3 h-3" /> : 
-                             <Minus className="w-3 h-3" />}
-                            {Math.abs(parseFloat(change))}%
-                          </span>
+                      <div className="flex items-center justify-end gap-1.5">
+                        {isEditing ? (
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              value={editInputValue}
+                              onChange={(e) => setEditInputValue(e.target.value)}
+                              onKeyDown={(e) => handleKeyDown(e, metric.metric_name, quarter)}
+                              onBlur={() => handleEditSave(metric.metric_name, quarter)}
+                              className="w-20 px-2 py-1 rounded text-sm text-right focus:outline-none"
+                              style={{
+                                backgroundColor: THEME.bg.input,
+                                borderColor: THEME.accent.primary,
+                                color: THEME.text.primary,
+                                border: `1px solid ${THEME.accent.primary}`
+                              }}
+                              autoFocus
+                            />
+                            <button
+                              onClick={() => handleEditSave(metric.metric_name, quarter)}
+                              className="p-1 rounded transition-colors"
+                              style={{ color: THEME.accent.primary }}
+                            >
+                              <Check className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={handleEditCancel}
+                              className="p-1 rounded transition-colors"
+                              style={{ color: THEME.text.secondary }}
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-end gap-0.5 flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <span 
+                                className="font-medium"
+                                style={{ 
+                                  color: isEdited ? THEME.accent.secondary : THEME.text.primary 
+                                }}
+                              >
+                                {formatValueForMetrics(displayValue)}
+                              </span>
+                              <button
+                                onClick={() => handleEditClick(metric.metric_name, quarter, displayValue)}
+                                className="p-0.5 rounded transition-all opacity-0 group-hover:opacity-100"
+                                style={{ color: THEME.text.tertiary }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.color = THEME.accent.primary;
+                                  e.currentTarget.style.backgroundColor = `${THEME.accent.primary}20`;
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.color = THEME.text.tertiary;
+                                  e.currentTarget.style.backgroundColor = 'transparent';
+                                }}
+                                title="Edit value"
+                              >
+                                <Pencil className="w-3 h-3" />
+                              </button>
+                            </div>
+                            {change !== null && qIdx > 0 && (
+                              <span 
+                                className="text-xs flex items-center gap-0.5"
+                                style={{ 
+                                  color: parseFloat(change) > 0 
+                                    ? THEME.accent.primary 
+                                    : parseFloat(change) < 0 
+                                    ? THEME.semantic.negative 
+                                    : THEME.text.secondary 
+                                }}
+                              >
+                                {parseFloat(change) > 0 ? <ArrowUpRight className="w-3 h-3" /> : 
+                                 parseFloat(change) < 0 ? <ArrowDownRight className="w-3 h-3" /> : 
+                                 <Minus className="w-3 h-3" />}
+                                {Math.abs(parseFloat(change))}%
+                              </span>
+                            )}
+                          </div>
                         )}
                       </div>
                     </td>
@@ -711,6 +833,29 @@ const MetricsCard = ({ data, isLoading, error, quarters, onOpenPDF, onExport, ti
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Annotation Section */}
+      <div className="border-t shrink-0 p-3" style={{ borderColor: THEME.border }}>
+        <div className="flex items-center gap-2 mb-2">
+          <FileText className="w-4 h-4" style={{ color: THEME.accent.primary }} />
+          <h4 className="text-sm font-semibold" style={{ color: THEME.text.primary }}>Annotations</h4>
+        </div>
+        <textarea
+          value={annotations}
+          onChange={(e) => setAnnotations(e.target.value)}
+          placeholder="Add comments or notes about these metrics..."
+          className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none resize-none"
+          style={{
+            backgroundColor: THEME.bg.input,
+            borderColor: THEME.border,
+            color: THEME.text.primary,
+            border: `1px solid ${THEME.border}`,
+            minHeight: '80px'
+          }}
+          onFocus={(e) => e.currentTarget.style.borderColor = THEME.accent.primary}
+          onBlur={(e) => e.currentTarget.style.borderColor = THEME.border}
+        />
       </div>
     </div>
   );
@@ -956,12 +1101,7 @@ const GuidanceCard = ({ data, isLoading, error, quarters, onOpenPDF, onExport, t
 // CHAT CARD
 // ============================================================================
 const ChatCard = ({ ticker, onOpenPDF }) => {
-  const [messages, setMessages] = useState([
-    {
-      role: 'assistant',
-      content: `Ask me anything about ${ticker}'s earnings, guidance, or operational metrics.`
-    }
-  ]);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [feedback, setFeedback] = useState({}); // Track feedback for each message by index
@@ -975,10 +1115,7 @@ const ChatCard = ({ ticker, onOpenPDF }) => {
   }, [messages]);
 
   useEffect(() => {
-    setMessages([{
-      role: 'assistant',
-      content: `Ask me anything about ${ticker}'s earnings, guidance, or operational metrics.`
-    }]);
+    setMessages([]);
     setFeedback({}); // Reset feedback when ticker changes
   }, [ticker]);
 
