@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Send, FileText, TrendingUp, MessageSquare, ChevronDown, ChevronRight, 
   ExternalLink, Loader2, Building2, Calendar, RefreshCw, X, AlertCircle,
-  BookOpen, Upload, Download, Zap, Database, Brain, Activity,
+  BookOpen, Upload, Download, Zap, Database, Activity,
   Plus, Check, ArrowUpRight, ArrowDownRight, Minus, ArrowRight,
   ThumbsUp, ThumbsDown, Pencil
 } from 'lucide-react';
@@ -43,33 +43,33 @@ const CONFIG = {
 };
 
 // ============================================================================
-// THEME COLORS - Professional Gunmetal
+// THEME COLORS - Professional Blue (Matching MOSAIC Logo)
 // ============================================================================
 const THEME = {
   bg: {
-    primary: '#1e2125',      // Dark Gunmetal - main background
-    secondary: '#2a3038',    // Lighter Grey - cards
-    tertiary: '#343b45',     // Hover states
-    input: '#222b35',        // Input backgrounds
+    primary: '#0f172a',      // Dark Slate Blue - main background
+    secondary: '#1e293b',    // Slate 800 - cards
+    tertiary: '#334155',     // Slate 700 - hover states
+    input: '#1e293b',        // Input backgrounds
   },
   text: {
     primary: '#ffffff',      // Clean white - headers
-    secondary: '#aab2bd',    // Light Grey - secondary text
-    tertiary: '#8891a0',     // Dimmer text
-    muted: '#6b7280',        // Very muted
+    secondary: '#cbd5e1',    // Slate 300 - secondary text
+    tertiary: '#94a3b8',     // Slate 400 - dimmer text
+    muted: '#64748b',        // Slate 500 - very muted
   },
   accent: {
-    primary: '#00d2b4',      // Teal/Mint - primary
-    secondary: '#44d9e6',    // Sky Blue - secondary
-    highlight: '#00ffc6',    // Highlights
+    primary: '#3b82f6',      // Blue 500 - primary (light blue from logo)
+    secondary: '#60a5fa',    // Blue 400 - secondary (lighter blue)
+    highlight: '#93c5fd',    // Blue 300 - highlights
   },
   semantic: {
-    positive: '#00d2b4',
-    negative: '#ef4444',
-    warning: '#f59e0b',
-    info: '#44d9e6',
+    positive: '#22c55e',     // Green 500
+    negative: '#ef4444',     // Red 500
+    warning: '#f59e0b',      // Amber 500
+    info: '#3b82f6',         // Blue 500
   },
-  border: '#3a424d',
+  border: '#334155',         // Slate 700
   shadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
 };
 
@@ -184,6 +184,20 @@ const exportGuidanceToCSV = (data, ticker) => {
   a.download = `${ticker}_guidance.csv`;
   a.click();
   URL.revokeObjectURL(url);
+};
+
+// ============================================================================
+// LOGO COMPONENT
+// ============================================================================
+const Logo = ({ size = 24, className = '' }) => {
+  return (
+    <img 
+      src="/logo.png" 
+      alt="MOSAIC Logo" 
+      className={className}
+      style={{ width: `${size}px`, height: `${size}px`, objectFit: 'contain' }}
+    />
+  );
 };
 
 // ============================================================================
@@ -835,17 +849,17 @@ const MetricsCard = ({ data, isLoading, error, quarters, onOpenPDF, onExport, ti
         </table>
       </div>
 
-      {/* Annotation Section */}
+      {/* Analyst Notes Section */}
       <div className="border-t shrink-0 p-3" style={{ borderColor: THEME.border }}>
         <div className="flex items-center gap-2 mb-2">
           <FileText className="w-4 h-4" style={{ color: THEME.accent.primary }} />
-          <h4 className="text-sm font-semibold" style={{ color: THEME.text.primary }}>Annotations</h4>
+          <h4 className="text-sm font-semibold" style={{ color: THEME.text.primary }}>Analyst Notes</h4>
         </div>
         <textarea
           value={annotations}
           onChange={(e) => setAnnotations(e.target.value)}
           placeholder="Add comments or notes about these metrics..."
-          className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none resize-none"
+          className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none resize-none mb-2"
           style={{
             backgroundColor: THEME.bg.input,
             borderColor: THEME.border,
@@ -856,6 +870,27 @@ const MetricsCard = ({ data, isLoading, error, quarters, onOpenPDF, onExport, ti
           onFocus={(e) => e.currentTarget.style.borderColor = THEME.accent.primary}
           onBlur={(e) => e.currentTarget.style.borderColor = THEME.border}
         />
+        <div className="flex justify-end">
+          <button
+            onClick={() => {
+              // Handle submit action - you can add your submit logic here
+              console.log('Analyst notes submitted:', annotations);
+            }}
+            className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            style={{
+              backgroundColor: THEME.accent.primary,
+              color: 'white'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = THEME.accent.secondary;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = THEME.accent.primary;
+            }}
+          >
+            Submit
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -1372,13 +1407,13 @@ const LandingView = ({ onSkip }) => {
         {/* Header */}
         <div className="text-center mb-8">
           <div 
-            className="inline-flex p-4 rounded-2xl mb-4"
+            className="inline-flex items-center justify-center p-4 rounded-2xl mb-4"
             style={{ 
-              background: `linear-gradient(135deg, ${THEME.accent.primary}, ${THEME.accent.secondary})`,
-              boxShadow: `0 8px 32px ${THEME.accent.primary}40`
+              backgroundColor: THEME.bg.secondary,
+              boxShadow: `0 8px 32px rgba(59, 130, 246, 0.3)`
             }}
           >
-            <Brain className="w-12 h-12 text-white" />
+            <Logo size={48} />
           </div>
           <h1 className="text-4xl font-bold mb-3" style={{ color: THEME.text.primary }}>
             MOSAIC
@@ -1525,13 +1560,13 @@ export default function App() {
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-3">
               <div 
-                className="p-2 rounded-lg"
+                className="p-2 rounded-lg flex items-center justify-center"
                 style={{ 
-                  background: `linear-gradient(135deg, ${THEME.accent.primary}, ${THEME.accent.secondary})`,
-                  boxShadow: `0 4px 12px ${THEME.accent.primary}40`
+                  backgroundColor: THEME.bg.secondary,
+                  boxShadow: `0 4px 12px rgba(59, 130, 246, 0.3)`
                 }}
               >
-                <Brain className="w-6 h-6 text-white" />
+                <Logo size={24} />
               </div>
               <div>
                 <h1 className="text-lg font-bold" style={{ color: THEME.text.primary }}>
