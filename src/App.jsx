@@ -1172,7 +1172,7 @@ const LandingView = ({ onSkip }) => {
             <Brain className="w-12 h-12 text-white" />
           </div>
           <h1 className="text-4xl font-bold mb-3" style={{ color: THEME.text.primary }}>
-            Financial Analysis Agent
+            MOSAIC
           </h1>
           <p className="text-lg mb-2" style={{ color: THEME.text.secondary }}>
             Upload Quarterly Earnings Transcripts to begin analysis
@@ -1326,7 +1326,7 @@ export default function App() {
               </div>
               <div>
                 <h1 className="text-lg font-bold" style={{ color: THEME.text.primary }}>
-                  Financial Analysis Agent
+                  MOSAIC
                 </h1>
                 <p className="text-xs" style={{ color: THEME.text.tertiary }}>
                   Powered by First Ray Capital
