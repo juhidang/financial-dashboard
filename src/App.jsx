@@ -1144,14 +1144,14 @@ const GuidanceCard = ({ data, isLoading, error, quarters, onOpenPDF, onExport, t
         ))}
       </div>
 
-      <div className="overflow-y-auto flex-1">
+      <div className="overflow-y-auto flex-1" style={{ marginTop: 0, paddingTop: 0 }}>
         {data.themes.map((themeGroup) => {
           const theme = themeColors[themeGroup.theme] || themeColors.OTHER;
           return (
             <div 
               key={themeGroup.theme} 
               className="border-b last:border-0"
-              style={{ borderColor: `${THEME.border}80` }}
+              style={{ borderColor: `${THEME.border}80`, marginTop: 0 }}
             >
               <button
                 onClick={() => toggleTheme(themeGroup.theme)}
